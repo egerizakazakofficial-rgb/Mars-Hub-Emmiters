@@ -1,0 +1,450 @@
+-- Project Games | Brookhaven Emitter Master V12 (BEST VERSION)
+-- Full Max | Categorized | Multi-Select & Search | PC & Mobile Responsive | Bug-Free
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+-- Temizlik (Eski UI varsa sil ve memory leak'leri önle)
+if CoreGui:FindFirstChild("ProjectGames_System") then 
+    CoreGui.ProjectGames_System:Destroy() 
+end
+
+local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ApplyEmmiter")
+
+-- Özel Logo ID'leri
+local PREMIUM_ICON = "rbxassetid://6010710098"
+local VIP_ICON = "rbxassetid://18248037214"
+
+-- [1]=ID, [2]=Arg, [3]=Name, [4]=IconID, [5]=isVIP, [6]=isRP
+local emitterData = {
+    {"00000002", "0002FreeWhite", "Free White", "18635845425", false, false},
+    {"00000003", "0003FreeYellow", "Free Yellow", "18635841291", false, false},
+    {"00000004", "0004FreeOrange", "Free Orange", "18635859639", false, false},
+    {"00000005", "0005FreeGreen", "Free Green", "18635848788", false, false},
+    {"00000006", "0006FreeBlue", "Free Blue", "18635847163", false, false},
+    {"00000007", "0007FreePurple", "Free Purple", "18635843697", false, false},
+    {"00000008", "0008FreePink", "Free Pink", "18635852477", false, false},
+    {"00000009", "0009FreeRed", "Free Red", "18635837646", false, false},
+    {"00000010", "001HeartsYellow", "Hearts Yellow", "18635672195", true, false},
+    {"00000011", "002HeartsGreen", "Hearts Green", "18635727693", true, false},
+    {"00000012", "003HeartsBlue", "Hearts Blue", "18635732186", true, false},
+    {"00000013", "004HeartsPurple", "Hearts Purple", "18635723426", true, false},
+    {"00000014", "005HeartsPink", "Hearts Pink", "18635726250", true, false},
+    {"00000015", "006HeartsRed", "Hearts Red", "18635729673", true, false},
+    {"00000016", "010DotsOrange", "Dots Orange", "18637252424", false, true},
+    {"00000017", "011DotsYellow", "Dots Yellow", "18637263004", false, true},
+    {"00000018", "012DotsWhite", "Dots White", "18637254199", false, true},
+    {"00000019", "013DotsGreen", "Dots Green", "18637265264", false, true},
+    {"00000020", "014DotsBlue", "Dots Blue", "18637256859", false, true},
+    {"00000021", "015DotsPurple", "Dots Purple", "18637261058", false, true},
+    {"00000022", "016DotsPink", "Dots Pink", "18637259328", false, true},
+    {"00000023", "017DotsRed", "Dots Red", "18637267290", false, true},
+    {"00000024", "020TwinkleWhite", "Twinkle White", "18637115654", true, false},
+    {"00000025", "021TwinkleYellow", "Twinkle Yellow", "18637118923", true, false},
+    {"00000026", "022TwinkleGreen", "Twinkle Green", "18637151114", true, false},
+    {"00000027", "023TwinklePurple", "Twinkle Purple", "18637153880", true, false},
+    {"00000028", "024TwinklePink", "Twinkle Pink", "18637157071", true, false},
+    {"00000029", "025TwinkleRed", "Twinkle Red", "18637155247", true, false},
+    {"00000030", "030FireWhite", "Fire White", "18637074370", true, false},
+    {"00000031", "031FireOrange", "Fire Orange", "18637025451", true, false},
+    {"00000032", "032FireGreen", "Fire Green", "18637078598", true, false},
+    {"00000033", "033FireBlue", "Fire Blue", "18637076370", true, false},
+    {"00000034", "034FirePurple", "Fire Purple", "18637070174", true, false},
+    {"00000035", "035FireBlack", "Fire Black", "18637072603", true, false},
+    {"00000036", "040SmallHeartsYellow", "S-Hearts Yellow", "18637339451", true, false},
+    {"00000037", "041SmallHeartsGreen", "S-Hearts Green", "18637337576", true, false},
+    {"00000038", "042SmallHeartsBlue", "S-Hearts Blue", "18637345162", true, false},
+    {"00000039", "043SmallHeartsPurple", "S-Hearts Purple", "18637335865", true, false},
+    {"00000040", "044SmallHeartsPink", "S-Hearts Pink", "18637343416", true, false},
+    {"00000041", "045SmallHeartsRed", "S-Hearts Red", "18637341847", true, false},
+    {"00000042", "050SparksWhite", "Sparks White", "18637383085", true, false},
+    {"00000043", "051SparksGreen", "Sparks Green", "18637385236", true, false},
+    {"00000044", "052SparksBlue", "Sparks Blue", "18637386856", true, false},
+    {"00000045", "053SparksPurple", "Sparks Purple", "18637442447", true, false},
+    {"00000046", "054SparksPink", "Sparks Pink", "18637445897", true, false},
+    {"00000047", "055SparksRed", "Sparks Red", "18637447550", true, false},
+    {"00000048", "060BubbleWhite", "Bubble White", "18637495023", true, false},
+    {"00000049", "061BubbleGreen", "Bubble Green", "18637493072", true, false},
+    {"00000050", "062BubbleBlue", "Bubble Blue", "18637499282", true, false},
+    {"00000051", "063BubblePurple", "Bubble Purple", "18637497343", true, false},
+    {"00000052", "064BubbleRed", "Bubble Red", "18637500927", true, false},
+    {"00000053", "070MusicWhite", "Music White", "18637675173", true, false},
+    {"00000054", "071MusicGreen", "Music Green", "18637677789", true, false},
+    {"00000055", "072MusicBlue", "Music Blue", "18637680960", true, false},
+    {"00000056", "073MusicPurple", "Music Purple", "18637679384", true, false},
+    {"00000057", "074MusicRed", "Music Red", "18637672698", true, false},
+    {"00000058", "080SmokeWhite", "Smoke White", "18637791748", true, false},
+    {"00000059", "081SmokeYellow", "Smoke Yellow", "18637800482", true, false},
+    {"00000060", "082SmokeOrange", "Smoke Orange", "18637793920", true, false},
+    {"00000061", "083SmokeGreen", "Smoke Green", "18637789299", true, false},
+    {"00000062", "084SmokeBlue", "Smoke Blue", "18637803021", true, false},
+    {"00000063", "085SmokePurple", "Smoke Purple", "18637813360", true, false},
+    {"00000064", "086SmokeRed", "Smoke Red", "18637796598", true, false},
+    {"00000065", "087SmokeBlack", "Smoke Black", "18637798529", true, false},
+    {"00000066", "090StarWhite", "Star White", "18637942956", true, false},
+    {"00000067", "091StarOrange", "Star Orange", "18637946172", true, false},
+    {"00000068", "092StarGreen", "Star Green", "18637934500", true, false},
+    {"00000069", "093StarBlue", "Star Blue", "18637940338", true, false},
+    {"00000070", "094StarPurple", "Star Purple", "18637944796", true, false},
+    {"00000071", "095StarPink", "Star Pink", "18637947820", true, false},
+    {"00000072", "096StarRed", "Star Red", "18637949457", true, false},
+}
+
+-- UI Setup
+local mainGui = Instance.new("ScreenGui")
+mainGui.Name = "Mars Hub"
+mainGui.Parent = CoreGui
+mainGui.ResetOnSpawn = false
+mainGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Gelişmiş & Pürüzsüz Drag Fonksiyonu
+local function makeSmoothDrag(obj)
+    local dragging = false
+    local dragInput, dragStart, startPos
+
+    obj.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = obj.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    obj.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            obj.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+-- Sürüklenebilir Logo
+local openBtn = Instance.new("ImageButton")
+openBtn.Name = "AnimatedProjectButton"
+openBtn.Size = UDim2.new(0, 60, 0, 60)
+openBtn.Position = UDim2.new(0, 15, 0.5, -30)
+openBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+openBtn.Image = "http://www.roblox.com/asset/?id=125614278681229"
+openBtn.Parent = mainGui
+
+Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0, 12)
+
+local openStroke = Instance.new("UIStroke", openBtn)
+openStroke.Thickness = 2
+openStroke.Color = Color3.fromRGB(130, 0, 255)
+
+local gradient = Instance.new("UIGradient")
+gradient.Rotation = 90
+gradient.Parent = openBtn
+
+-- Memory Leak Korumalı Animasyon Döngüsü
+task.spawn(function()
+    local counter = 0
+    while task.wait(0.03) do
+        if not openBtn or not openBtn.Parent then break end 
+        counter = counter + 0.01
+        local rainbowColor1 = Color3.fromHSV(math.abs(math.sin(counter)), 1, 1)
+        local purpleVibe = Color3.fromRGB(130, 0, 255)
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, rainbowColor1),
+            ColorSequenceKeypoint.new(1, purpleVibe)
+        })
+        openStroke.Color = purpleVibe:Lerp(rainbowColor1, 0.5)
+    end
+end)
+
+makeSmoothDrag(openBtn)
+
+-- Ana Panel (Responsive Yatay Tasarım)
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0.85, 0, 0.75, 0)
+main.AnchorPoint = Vector2.new(0.5, 0.5)
+main.Position = UDim2.new(0.5, 0, 1.5, 0)
+main.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+main.BorderSizePixel = 0
+main.ClipsDescendants = true
+main.Parent = mainGui
+
+local sizeConst = Instance.new("UISizeConstraint", main)
+sizeConst.MaxSize = Vector2.new(850, 500)
+sizeConst.MinSize = Vector2.new(480, 280)
+
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 15)
+local mainStroke = Instance.new("UIStroke", main)
+mainStroke.Thickness = 2
+local grad = Instance.new("UIGradient", mainStroke)
+grad.Color = ColorSequence.new(Color3.fromRGB(255, 85, 0), Color3.fromRGB(50, 10, 0))
+
+makeSmoothDrag(main)
+
+-- Başlık & Araç Çubuğu
+local top = Instance.new("Frame")
+top.Size = UDim2.new(1, 0, 0, 55)
+top.BackgroundTransparency = 1
+top.Parent = main
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0.4, 0, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.Text = "⭐ Mars Hub Emmiters ⭐"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 17
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.BackgroundTransparency = 1
+title.Parent = top
+
+local close = Instance.new("TextButton")
+close.Size = UDim2.new(0, 35, 0, 35)
+close.AnchorPoint = Vector2.new(1, 0.5)
+close.Position = UDim2.new(1, -15, 0.5, 0)
+close.Text = "×"
+close.TextColor3 = Color3.fromRGB(255, 60, 60)
+close.Font = Enum.Font.GothamBold
+close.TextSize = 30
+close.BackgroundTransparency = 1
+close.Parent = top
+
+local searchBar = Instance.new("TextBox")
+searchBar.Size = UDim2.new(0, 130, 0, 30)
+searchBar.AnchorPoint = Vector2.new(1, 0.5)
+searchBar.Position = UDim2.new(1, -60, 0.5, 0)
+searchBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+searchBar.TextColor3 = Color3.fromRGB(255, 255, 255)
+searchBar.PlaceholderText = "Search..."
+searchBar.Font = Enum.Font.Gotham
+searchBar.TextSize = 12
+searchBar.ClearTextOnFocus = false
+searchBar.Parent = top
+Instance.new("UICorner", searchBar).CornerRadius = UDim.new(0, 6)
+local searchStroke = Instance.new("UIStroke", searchBar)
+searchStroke.Color = Color3.fromRGB(40, 40, 45)
+
+local multiBtn = Instance.new("TextButton")
+multiBtn.Size = UDim2.new(0, 80, 0, 30)
+multiBtn.AnchorPoint = Vector2.new(1, 0.5)
+multiBtn.Position = UDim2.new(1, -200, 0.5, 0)
+multiBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+multiBtn.TextColor3 = Color3.fromRGB(255, 85, 85)
+multiBtn.Text = "Offline"
+multiBtn.Font = Enum.Font.GothamBold
+multiBtn.TextSize = 12
+multiBtn.Parent = top
+Instance.new("UICorner", multiBtn).CornerRadius = UDim.new(0, 6)
+local multiStroke = Instance.new("UIStroke", multiBtn)
+multiStroke.Color = Color3.fromRGB(40, 40, 45)
+
+-- Scroll Alanı
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, -15, 1, -70)
+scroll.Position = UDim2.new(0, 10, 0, 60)
+scroll.BackgroundTransparency = 1
+scroll.ScrollBarThickness = 2
+scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 85, 0)
+scroll.Parent = main
+
+local listLayout = Instance.new("UIListLayout", scroll)
+listLayout.Padding = UDim.new(0, 20)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Kategori Oluşturucu
+local function createCategory(name, order)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -10, 0, 40)
+    frame.BackgroundTransparency = 1
+    frame.LayoutOrder = order
+    frame.Parent = scroll
+    
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 30)
+    lbl.Text = "  " .. name:upper()
+    lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    lbl.Parent = frame
+    Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 6)
+    
+    local container = Instance.new("Frame")
+    container.Name = "Container"
+    container.Size = UDim2.new(1, 0, 0, 0)
+    container.Position = UDim2.new(0, 0, 0, 40)
+    container.BackgroundTransparency = 1
+    container.Parent = frame
+    
+    local grid = Instance.new("UIGridLayout", container)
+    grid.CellSize = UDim2.new(0, 130, 0, 145)
+    grid.CellPadding = UDim2.new(0, 10, 0, 10)
+    grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    
+    grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        container.Size = UDim2.new(1, 0, 0, grid.AbsoluteContentSize.Y)
+        frame.Size = UDim2.new(1, -10, 0, grid.AbsoluteContentSize.Y + 50)
+    end)
+    
+    return container
+end
+
+local freeCont = createCategory("Free Emitters", 1)
+local premiumCont = createCategory("Emitters (VIP & Premium)", 2)
+
+-- Veritabanı
+local cardTable = {}
+local activeCards = {}
+local multiEnabled = false
+
+-- Güvenli Emitter Uygulama (Asenkron ve Çökme Korumalı)
+local function applyEmitterSafe(id, arg)
+    task.spawn(function()
+        pcall(function()
+            if remote and remote.Parent then
+                remote:InvokeServer(id, arg)
+            end
+        end)
+    end)
+end
+
+-- Multi-Select Toggle
+multiBtn.MouseButton1Click:Connect(function()
+    multiEnabled = not multiEnabled
+    if multiEnabled then
+        multiBtn.Text = "Patched"
+        multiBtn.TextColor3 = Color3.fromRGB(85, 255, 85)
+        multiStroke.Color = Color3.fromRGB(85, 255, 85)
+    else
+        multiBtn.Text = "Patched"
+        multiBtn.TextColor3 = Color3.fromRGB(255, 85, 85)
+        multiStroke.Color = Color3.fromRGB(40, 40, 45)
+        
+        for c, _ in pairs(activeCards) do
+            if c and c.Parent and c:FindFirstChild("UIStroke") then
+                c.UIStroke.Color = Color3.fromRGB(40, 40, 45)
+            end
+        end
+        table.clear(activeCards)
+    end
+end)
+
+-- Kartları Oluştur
+for _, d in ipairs(emitterData) do
+    local card = Instance.new("TextButton")
+    card.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    card.Text = ""
+    card.Parent = (d[5] or d[6]) and premiumCont or freeCont
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
+    
+    local stroke = Instance.new("UIStroke", card)
+    stroke.Color = Color3.fromRGB(40, 40, 45)
+
+    cardTable[card] = d[3]:lower()
+
+    local img = Instance.new("ImageLabel")
+    img.Size = UDim2.new(0, 60, 0, 60)
+    img.Position = UDim2.new(0.5, -30, 0, 15)
+    img.Image = "rbxassetid://" .. d[4]
+    img.BackgroundTransparency = 1
+    img.Parent = card
+
+    local t = Instance.new("TextLabel")
+    t.Size = UDim2.new(1, -10, 0, 30)
+    t.Position = UDim2.new(0, 5, 1, -40)
+    t.Text = d[3]
+    t.TextColor3 = Color3.fromRGB(200, 200, 200)
+    t.Font = Enum.Font.GothamSemibold
+    t.TextSize = 10
+    t.BackgroundTransparency = 1
+    t.Parent = card
+
+    if d[5] then
+        local vLogo = Instance.new("ImageLabel")
+        vLogo.Size = UDim2.new(0, 26, 0, 26)
+        vLogo.Position = UDim2.new(1, -28, 1, -28)
+        vLogo.Image = VIP_ICON
+        vLogo.BackgroundTransparency = 1
+        vLogo.Parent = card
+    elseif d[6] then
+        local rLogo = Instance.new("ImageLabel")
+        rLogo.Size = UDim2.new(0, 26, 0, 26)
+        rLogo.Position = UDim2.new(1, -28, 1, -28)
+        rLogo.Image = PREMIUM_ICON
+        rLogo.BackgroundTransparency = 1
+        rLogo.Parent = card
+    end
+
+    card.MouseButton1Click:Connect(function()
+        if multiEnabled then
+            if activeCards[card] then
+                activeCards[card] = nil
+                stroke.Color = Color3.fromRGB(40, 40, 45)
+            else
+                local count = 0
+                for _ in pairs(activeCards) do count = count + 1 end
+                if count < 4 then
+                    activeCards[card] = true
+                    stroke.Color = Color3.fromRGB(255, 85, 0)
+                    applyEmitterSafe(d[1], d[2])
+                end
+            end
+        else
+            for c, _ in pairs(activeCards) do
+                if c and c.Parent and c:FindFirstChild("UIStroke") then
+                    c.UIStroke.Color = Color3.fromRGB(40, 40, 45)
+                end
+            end
+            table.clear(activeCards)
+            
+            activeCards[card] = true
+            stroke.Color = Color3.fromRGB(255, 85, 0)
+            applyEmitterSafe(d[1], d[2])
+        end
+    end)
+end
+
+-- Arama Çubuğu (Geliştirilmiş)
+searchBar:GetPropertyChangedSignal("Text"):Connect(function()
+    local text = searchBar.Text:lower()
+    for cardObj, name in pairs(cardTable) do
+        if text == "" or string.find(name, text, 1, true) then
+            cardObj.Visible = true
+        else
+            cardObj.Visible = false
+        end
+    end
+    -- Arama sonrası Scroll boyutunu tazelemek için tetikleyici
+    scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 40)
+end)
+
+-- Tween & Toggle
+local open = false
+local function toggleUI()
+    open = not open
+    main:TweenPosition(open and UDim2.new(0.5, 0, 0.5, 0) or UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
+end
+
+openBtn.MouseButton1Click:Connect(toggleUI)
+close.MouseButton1Click:Connect(toggleUI)
+
+-- Scroll Canvas Dinamik Güncelleme
+listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 40)
+end)
