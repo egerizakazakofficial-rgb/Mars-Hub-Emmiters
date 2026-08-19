@@ -1,7 +1,5 @@
 -- Merged: Mars Hub Emitters + Mars Hub AI Chat
--- Offline button removed; AI button added in its place.
--- Emitters UI (full) + AI Chat UI (full) combined for a single local-script main.lua
--- FIXED: AI panel no longer opens automatically; send button behavior fixed; AI size controls added.
+-- Updated: AI toggle fixes, typing indicator, timeout, size modes, robustness improvements.
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -82,6 +80,7 @@ openStroke.Color = Color3.fromRGB(130, 0, 255)
 local gradient = Instance.new("UIGradient")
 gradient.Rotation = 90
 gradient.Parent = openBtn
+openBtn.ZIndex = 5000
 
 -- Animation with memory-check
 task.spawn(function()
@@ -198,6 +197,7 @@ grad.Color = ColorSequence.new(Color3.fromRGB(255, 85, 0), Color3.fromRGB(50, 10
 local sizeConst = Instance.new("UISizeConstraint", emitterMain)
 sizeConst.MaxSize = Vector2.new(850, 500)
 sizeConst.MinSize = Vector2.new(480, 280)
+emitterMain.ZIndex = 1
 makeSmoothDrag(emitterMain)
 
 -- Emitter Top bar
@@ -258,6 +258,7 @@ aiBtn.Parent = emitterTop
 Instance.new("UICorner", aiBtn).CornerRadius = UDim.new(0, 6)
 local aiStroke = Instance.new("UIStroke", aiBtn)
 aiStroke.Color = Color3.fromRGB(40, 40, 45)
+aiBtn.ZIndex = 2
 
 -- Multi-select toggle (moved left of AI button)
 local multiBtn = Instance.new("TextButton")
@@ -521,7 +522,7 @@ end
 
 -- AI main panel
 local aiMain = Instance.new("Frame")
-aiMain.Size = UDim2.new(0.7, 0, 0.6, 0) -- default smaller; can be changed by settings
+aiMain.Size = UDim2.new(0.8, 0, 0.7, 0)
 aiMain.AnchorPoint = Vector2.new(0.5, 0.5)
 aiMain.Position = UDim2.new(0.5, 0, 1.5, 0)
 aiMain.BackgroundColor3 = settings.uiBgColor
@@ -531,11 +532,12 @@ aiMain.Parent = rootGui
 aiMain.Visible = false -- ensure hidden until user clicks AI button
 Instance.new("UICorner", aiMain).CornerRadius = UDim.new(0, 15)
 local aiSizeConst = Instance.new("UISizeConstraint", aiMain)
-aiSizeConst.MaxSize = Vector2.new(900, 600)
+aiSizeConst.MaxSize = Vector2.new(1000, 700)
 aiSizeConst.MinSize = Vector2.new(420, 220)
 local aiMainStroke = Instance.new("UIStroke", aiMain)
 aiMainStroke.Thickness = 2
 aiMainStroke.Color = settings.uiAccentColor
+aiMain.ZIndex = 100
 makeSmoothDrag(aiMain)
 
 -- helper to set ai size modes
@@ -566,6 +568,7 @@ aiTop.Size = UDim2.new(1, 0, 0, 55)
 aiTop.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 aiTop.BorderSizePixel = 0
 aiTop.Parent = aiMain
+aiTop.ZIndex = 101
 
 local aiTitle = Instance.new("TextLabel")
 aiTitle.Size = UDim2.new(0.6, 0, 1, 0)
@@ -577,6 +580,7 @@ aiTitle.TextSize = 17
 aiTitle.TextXAlignment = Enum.TextXAlignment.Left
 aiTitle.BackgroundTransparency = 1
 aiTitle.Parent = aiTop
+aiTitle.ZIndex = 101
 
 -- AI settings button
 local aiSettingsBtn = Instance.new("TextButton")
@@ -590,19 +594,21 @@ aiSettingsBtn.TextSize = 20
 aiSettingsBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 aiSettingsBtn.Parent = aiTop
 Instance.new("UICorner", aiSettingsBtn).CornerRadius = UDim.new(0, 6)
+aiSettingsBtn.ZIndex = 102
 
--- AI maximize toggle button (quick size change)
-local aiMaxBtn = Instance.new("TextButton")
-aiMaxBtn.Size = UDim2.new(0, 60, 0, 30)
-aiMaxBtn.AnchorPoint = Vector2.new(1, 0.5)
-aiMaxBtn.Position = UDim2.new(1, -100, 0.5, 0)
-aiMaxBtn.Text = "Size"
-aiMaxBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-aiMaxBtn.Font = Enum.Font.GothamBold
-aiMaxBtn.TextSize = 12
-aiMaxBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-aiMaxBtn.Parent = aiTop
-Instance.new("UICorner", aiMaxBtn).CornerRadius = UDim.new(0, 6)
+-- AI size quick button
+local aiSizeBtn = Instance.new("TextButton")
+aiSizeBtn.Size = UDim2.new(0, 60, 0, 30)
+aiSizeBtn.AnchorPoint = Vector2.new(1, 0.5)
+aiSizeBtn.Position = UDim2.new(1, -100, 0.5, 0)
+aiSizeBtn.Text = "Size"
+aiSizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+aiSizeBtn.Font = Enum.Font.GothamBold
+aiSizeBtn.TextSize = 12
+aiSizeBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+aiSizeBtn.Parent = aiTop
+Instance.new("UICorner", aiSizeBtn).CornerRadius = UDim.new(0, 6)
+aiSizeBtn.ZIndex = 102
 
 local aiClose = Instance.new("TextButton")
 aiClose.Size = UDim2.new(0, 35, 0, 35)
@@ -614,6 +620,7 @@ aiClose.Font = Enum.Font.GothamBold
 aiClose.TextSize = 30
 aiClose.BackgroundTransparency = 1
 aiClose.Parent = aiTop
+aiClose.ZIndex = 102
 
 -- AI chat display
 local chatScroll = Instance.new("ScrollingFrame")
@@ -623,16 +630,19 @@ chatScroll.BackgroundTransparency = 1
 chatScroll.ScrollBarThickness = 3
 chatScroll.ScrollBarImageColor3 = settings.uiAccentColor
 chatScroll.Parent = aiMain
+chatScroll.ZIndex = 101
 
 local chatLayout = Instance.new("UIListLayout", chatScroll)
 chatLayout.Padding = UDim.new(0, 8)
 chatLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
+-- displayMessage now returns the bubble objects so we can update them (typing -> final)
 local function displayMessage(text, isUser)
     local msgContainer = Instance.new("Frame")
     msgContainer.Size = UDim2.new(1, 0, 0, 0)
     msgContainer.BackgroundTransparency = 1
     msgContainer.Parent = chatScroll
+    msgContainer.ZIndex = 101
 
     local msgBubble = Instance.new("TextLabel")
     msgBubble.Size = UDim2.new(0.85, 0, 0, 0)
@@ -644,76 +654,99 @@ local function displayMessage(text, isUser)
     msgBubble.TextSize = 12
     msgBubble.Text = text or ""
     msgBubble.Parent = msgContainer
+    msgBubble.ZIndex = 101
 
     Instance.new("UICorner", msgBubble).CornerRadius = UDim.new(0, 8)
     local padding = Instance.new("UIPadding", msgBubble)
     padding.Padding = UDim.new(0, 12, 0, 12)
 
-    -- Auto-size
-    local computedWidth = math.max(200, (aiMain.AbsoluteSize.X * 0.85) - 24)
-    local textSize = TextService:GetTextSize(msgBubble.Text, 12, Enum.Font.Gotham, Vector2.new(computedWidth, 2000))
-    msgBubble.Size = UDim2.new(0.85, 0, 0, math.max(textSize.Y + 24, 30))
-    msgContainer.Size = UDim2.new(1, 0, 0, msgBubble.Size.Y.Offset + 5)
-end
-
--- AI API calls (basic)
-local function callGeminiAPI(userMessage)
-    if settings.geminiKey == "" then
-        displayMessage("❌ Gemini API Key is not set. Please go to Settings.", false)
-        return
+    -- Auto-size using current aiMain size to compute width
+    local function resizeBubble()
+        local computedWidth = math.max(200, math.floor(aiMain.AbsoluteSize.X * 0.85) - 24)
+        local textSize = TextService:GetTextSize(msgBubble.Text, msgBubble.TextSize, msgBubble.Font, Vector2.new(computedWidth, 2000))
+        msgBubble.Size = UDim2.new(0.85, 0, 0, math.max(textSize.Y + 24, 30))
+        msgContainer.Size = UDim2.new(1, 0, 0, msgBubble.Size.Y.Offset + 5)
     end
 
-    local modelName = settings.geminiModel == "flash" and "gemini-2.0-flash-exp" or "gemini-1.5-lite"
-    local url = "https://generativelanguage.googleapis.com/v1beta/models/" .. modelName .. ":generateContent?key=" .. settings.geminiKey
+    -- Wait a frame then resize (aiMain might not be fully sized yet)
+    task.spawn(function()
+        task.wait() -- allow layout to compute
+        if msgBubble and msgBubble.Parent then
+            resizeBubble()
+        end
+    end)
+
+    -- Return bubble so caller can update text
+    return msgBubble, msgContainer, resizeBubble
+end
+
+-- AI request helper with timeout and unified callback
+local function requestAI(userMessage, timeoutSeconds, callback)
+    timeoutSeconds = timeoutSeconds or 25
+    local done = false
+
+    -- safety wrapper to ensure callback called once
+    local function finish(success, text)
+        if done then return end
+        done = true
+        pcall(function() callback(success, text) end)
+    end
 
     task.spawn(function()
-        pcall(function()
-            local payload = {
-                contents = {
-                    {
-                        parts = {
-                            {
-                                text = userMessage
+        if settings.apiProvider == "gemini" then
+            if settings.geminiKey == "" then
+                finish(false, "❌ Gemini API Key is not set. Please go to Settings.")
+                return
+            end
+
+            local modelName = settings.geminiModel == "flash" and "gemini-2.0-flash-exp" or "gemini-1.5-lite"
+            local url = "https://generativelanguage.googleapis.com/v1beta/models/" .. modelName .. ":generateContent?key=" .. settings.geminiKey
+            local ok, response = pcall(function()
+                local payload = {
+                    contents = {
+                        {
+                            parts = {
+                                { text = userMessage }
                             }
                         }
                     }
                 }
-            }
-
-            local response = HttpService:PostAsync(url, HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
-            local data = HttpService:JSONDecode(response)
-
-            if data and data.candidates and data.candidates[1] and data.candidates[1].content and data.candidates[1].content.parts[1] then
-                displayMessage(data.candidates[1].content.parts[1].text, false)
-            else
-                displayMessage("❌ No response from Gemini API", false)
+                -- Use PostAsync; some environments may restrict RequestAsync
+                return HttpService:PostAsync(url, HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+            end)
+            if not ok or not response then
+                finish(false, "❌ Failed to contact Gemini API.")
+                return
             end
-        end)
-    end)
-end
 
-local function callOpenAIAPI(userMessage)
-    if settings.openaiKey == "" then
-        displayMessage("❌ OpenAI API Key is not set. Please go to Settings.", false)
-        return
-    end
+            local ok2, data = pcall(function() return HttpService:JSONDecode(response) end)
+            if not ok2 or not data then
+                finish(false, "❌ Invalid response from Gemini API.")
+                return
+            end
 
-    local url = "https://api.openai.com/v1/chat/completions"
+            if data and data.candidates and data.candidates[1] and data.candidates[1].content and data.candidates[1].content.parts and data.candidates[1].content.parts[1] then
+                finish(true, data.candidates[1].content.parts[1].text)
+            else
+                finish(false, "❌ No response from Gemini API.")
+            end
+        else -- openai
+            if settings.openaiKey == "" then
+                finish(false, "❌ OpenAI API Key is not set. Please go to Settings.")
+                return
+            end
 
-    task.spawn(function()
-        pcall(function()
-            local payload = {
-                model = settings.openaiModel,
-                messages = {
-                    {
-                        role = "user",
-                        content = userMessage
-                    }
-                },
-                max_tokens = 2000,
-            }
+            local url = "https://api.openai.com/v1/chat/completions"
+            local ok, responseBody = pcall(function()
+                local payload = {
+                    model = settings.openaiModel,
+                    messages = {
+                        { role = "user", content = userMessage }
+                    },
+                    max_tokens = 2000,
+                }
 
-            local ok, response = pcall(function()
+                -- Prefer RequestAsync if available for headers
                 if HttpService.RequestAsync then
                     local req = HttpService:RequestAsync({
                         Url = url,
@@ -724,25 +757,37 @@ local function callOpenAIAPI(userMessage)
                         },
                         Body = HttpService:JSONEncode(payload)
                     })
-                    return req.Body
+                    return req and req.Body or nil
                 else
                     return HttpService:PostAsync(url, HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
                 end
             end)
 
-            if not ok or not response then
-                displayMessage("❌ Failed to contact OpenAI API", false)
+            if not ok or not responseBody then
+                finish(false, "❌ Failed to contact OpenAI API.")
                 return
             end
 
-            local data = HttpService:JSONDecode(response)
-
-            if data and data.choices and data.choices[1] and data.choices[1].message then
-                displayMessage(data.choices[1].message.content, false)
-            else
-                displayMessage("❌ No response from OpenAI API", false)
+            local ok2, data = pcall(function() return HttpService:JSONDecode(responseBody) end)
+            if not ok2 or not data then
+                finish(false, "❌ Invalid response from OpenAI API.")
+                return
             end
-        end)
+
+            if data and data.choices and data.choices[1] and data.choices[1].message and data.choices[1].message.content then
+                finish(true, data.choices[1].message.content)
+            else
+                finish(false, "❌ No response from OpenAI API.")
+            end
+        end
+    end)
+
+    -- timeout routine
+    task.delay(timeoutSeconds, function()
+        if not done then
+            done = true
+            pcall(function() callback(false, "❌ Request timed out after " .. tostring(timeoutSeconds) .. "s.") end)
+        end
     end)
 end
 
@@ -753,6 +798,7 @@ aiInputFrame.Position = UDim2.new(0, 0, 1, -55)
 aiInputFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 aiInputFrame.BorderSizePixel = 0
 aiInputFrame.Parent = aiMain
+aiInputFrame.ZIndex = 101
 
 local inputBox = Instance.new("TextBox")
 inputBox.Size = UDim2.new(1, -65, 0, 45)
@@ -769,6 +815,7 @@ Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0, 6)
 local inputStroke = Instance.new("UIStroke", inputBox)
 inputStroke.Color = Color3.fromRGB(40, 40, 45)
 Instance.new("UIPadding", inputBox).Padding = UDim.new(0, 10, 0, 10)
+inputBox.ZIndex = 101
 
 local sendBtn = Instance.new("TextButton")
 sendBtn.Size = UDim2.new(0, 50, 0, 45)
@@ -780,6 +827,7 @@ sendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 sendBtn.Font = Enum.Font.GothamBold
 sendBtn.Parent = aiInputFrame
 Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(0, 6)
+sendBtn.ZIndex = 101
 
 -- trim helper
 local function trim(s)
@@ -787,35 +835,76 @@ local function trim(s)
     return s:match("^%s*(.-)%s*$") or s
 end
 
--- central send function (used by button and Enter)
+-- sendMessage now creates a typing bubble and updates it when result arrives
 local function sendMessage()
     local msg = trim(inputBox.Text)
     if msg == "" then return end
 
+    -- display user's message
     displayMessage(msg, true)
+
+    -- create assistant typing bubble
+    local typingBubble, typingContainer, resizeFn = displayMessage("⏳ Thinking...", false)
+
+    -- disable input while waiting
+    inputBox.ClearTextOnFocus = false
+    inputBox.Active = false
+    sendBtn.Active = false
+    sendBtn.AutoButtonColor = false
+    sendBtn.BackgroundTransparency = 0.5
+
     inputBox.Text = ""
 
-    task.wait(0.05)
-    chatScroll.CanvasSize = UDim2.new(0, 0, 0, chatLayout.AbsoluteContentSize.Y)
-    chatScroll.CanvasPosition = Vector2.new(0, chatLayout.AbsoluteContentSize.Y)
+    -- typing dots animation
+    local animRunning = true
+    task.spawn(function()
+        local dots = 0
+        while animRunning and typingBubble and typingBubble.Parent do
+            dots = (dots % 3) + 1
+            typingBubble.Text = "⏳ Thinking" .. string.rep(".", dots)
+            if resizeFn then pcall(resizeFn) end
+            task.wait(0.5)
+        end
+    end)
 
-    if settings.apiProvider == "gemini" then
-        callGeminiAPI(msg)
-    else
-        callOpenAIAPI(msg)
-    end
+    -- perform request
+    requestAI(msg, 25, function(success, text)
+        -- stop animation
+        animRunning = false
+
+        if not typingBubble or not typingBubble.Parent then
+            -- fallback: just display result as new message
+            if success then
+                displayMessage(text, false)
+            else
+                displayMessage(text, false)
+            end
+        else
+            -- update the existing typing bubble with final text
+            typingBubble.Text = text or (success and "" or "❌ Error")
+            -- update colors if needed
+            typingBubble.TextColor3 = Color3.fromRGB(255, 255, 255)
+            typingBubble.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+            if resizeFn then pcall(resizeFn) end
+        end
+
+        -- re-enable input
+        inputBox.Active = true
+        sendBtn.Active = true
+        sendBtn.AutoButtonColor = true
+        sendBtn.BackgroundTransparency = 0
+    end)
 end
 
 sendBtn.MouseButton1Click:Connect(sendMessage)
 
 inputBox.FocusLost:Connect(function(enterPressed)
     if enterPressed then
-        -- call send logic directly (don't try to Fire the event)
         sendMessage()
     end
 end)
 
--- AI Settings Panel (compact port of original)
+-- AI Settings Panel (compact)
 local settingsPanel = Instance.new("Frame")
 settingsPanel.Name = "AISettingsPanel"
 settingsPanel.Size = UDim2.new(0.9, 0, 0.9, 0)
@@ -824,7 +913,7 @@ settingsPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
 settingsPanel.BackgroundColor3 = settings.uiBgColor
 settingsPanel.BorderSizePixel = 0
 settingsPanel.Visible = false
-settingsPanel.ZIndex = 999
+settingsPanel.ZIndex = 200
 settingsPanel.Parent = rootGui
 Instance.new("UICorner", settingsPanel).CornerRadius = UDim.new(0, 15)
 local settingsStroke = Instance.new("UIStroke", settingsPanel)
@@ -898,16 +987,6 @@ local function createTextInput(placeholder, order, isPassword)
     input.TextSize = 12
     input.ClearTextOnFocus = false
     input.Parent = frame
-
-    if isPassword then
-        -- simple obfuscation: store in a hidden var; show dots
-        local realText = ""
-        input:GetPropertyChangedSignal("Text"):Connect(function()
-            if input.Text and #input.Text >= #realText then
-                -- rough update (kept for UI only)
-            end
-        end)
-    end
 
     Instance.new("UICorner", input).CornerRadius = UDim.new(0, 6)
     Instance.new("UIStroke", input).Color = Color3.fromRGB(50, 50, 55)
@@ -985,7 +1064,6 @@ do
         settings.apiProvider = selected
         saveSettings()
     end)
-    -- show current
     dropdownFrame:FindFirstChildWhichIsA("TextButton").Text = settings.apiProvider
     dropdownFrame.Parent = settingsScroll
 end
@@ -1018,7 +1096,7 @@ end)
 
 createSettingLabel("🎨 UI CUSTOMIZATION", 9)
 
--- Color picker simplified (string RGB input)
+-- Color pickers
 local function createColorPicker(labelText, order, settingKey)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -20, 0, 45)
@@ -1110,7 +1188,11 @@ local function createColorPicker(labelText, order, settingKey)
                 local newR = tonumber(parts[1]) or 0
                 local newG = tonumber(parts[2]) or 0
                 local newB = tonumber(parts[3]) or 0
-                settings[settingKey] = Color3.fromRGB(math.clamp(newR, 0, 255), math.clamp(newG, 0, 255), math.clamp(newB, 0, 255))
+                settings[settingKey] = Color3.fromRGB(
+                    math.clamp(newR, 0, 255),
+                    math.clamp(newG, 0, 255),
+                    math.clamp(newB, 0, 255)
+                )
                 colorBtn.BackgroundColor3 = settings[settingKey]
                 saveSettings()
 
@@ -1150,7 +1232,6 @@ do
         setAISize(selected)
         saveSettings()
     end)
-    -- set displayed value
     sizeDropdown:FindFirstChildWhichIsA("TextButton").Text = settings.aiSize or "normal"
 end
 
@@ -1201,6 +1282,7 @@ resetBtn.MouseButton1Click:Connect(function()
     aiMain.BackgroundColor3 = settings.uiBgColor
     aiMainStroke.Color = settings.uiAccentColor
     settingsStroke.Color = settings.uiAccentColor
+    sendBtn.BackgroundColor3 = settings.uiAccentColor
     displayMessage("🔄 Settings reset to default!", false)
 end)
 
@@ -1212,17 +1294,23 @@ settingsClose.MouseButton1Click:Connect(function()
     settingsPanel.Visible = false
 end)
 
--- AI panel toggle (aiBtn placed in emitter header)
+-- AI panel toggle (aiBtn placed in emitter header) - robust open/close with ZIndex handling
 local aiOpen = false
 local function toggleAIUI()
     aiOpen = not aiOpen
     if aiOpen then
+        -- ensure AI above other UI
+        aiMain.ZIndex = 100
+        aiTop.ZIndex = 101
+        chatScroll.ZIndex = 101
+        aiInputFrame.ZIndex = 101
+        settingsPanel.ZIndex = 200
+
         aiMain.Visible = true
-        aiMain:TweenPosition(UDim2.new(0.5, 0, 0.5, 0), "Out", "Back", 0.5, true)
+        aiMain:TweenPosition(UDim2.new(0.5, 0, 0.5, 0), "Out", "Back", 0.45, true)
     else
-        -- hide after tween to avoid abrupt disappearance
-        aiMain:TweenPosition(UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
-        task.delay(0.55, function()
+        aiMain:TweenPosition(UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.45, true)
+        task.delay(0.5, function()
             if aiMain and aiMain.Parent then
                 aiMain.Visible = false
             end
@@ -1233,8 +1321,8 @@ end
 aiBtn.MouseButton1Click:Connect(toggleAIUI)
 aiClose.MouseButton1Click:Connect(toggleAIUI)
 
--- quick size button cycles through small -> normal -> max
-aiMaxBtn.MouseButton1Click:Connect(function()
+-- size quick-cycle button
+aiSizeBtn.MouseButton1Click:Connect(function()
     local current = settings.aiSize or "normal"
     if current == "small" then
         setAISize("normal")
