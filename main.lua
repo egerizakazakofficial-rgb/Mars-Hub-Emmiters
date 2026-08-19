@@ -1,6 +1,7 @@
 -- Project Games | Brookhaven AI Chat Master V12 (BEST VERSION)
 -- Full Max | Multi-API Support | Customizable UI | PC & Mobile Responsive | Bug-Free
 
+
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
