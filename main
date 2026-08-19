@@ -1,6 +1,6 @@
--- Project Games | Brookhaven Emitter Master V13 (AI & THEME UPDATE)
--- Full Max | Categorized | Search | PC & Mobile Responsive
--- YENİLİKLER: AI Entegrasyonu (Gemini & OpenAI), Gelişmiş Tema (RGB, Custom Color, Gradient), Multi Seçim Kaldırıldı.
+-- Project Games | Brookhaven Emitter Master V12 + AI Integration
+-- Full Max | Categorized | Multi-Select & Search | PC & Mobile Responsive | Bug-Free
+-- Geliştirildi: AI Asistan, ScriptBlox Entegrasyonu, RGB & Gradient UI Özelleştirme
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -10,15 +10,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
--- Executor HTTP Request Desteği (API için şart)
-local requestFunc = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-if not requestFunc then
-    warn("Executor'un HTTP Request desteklemiyor! AI özellikleri çalışmayabilir.")
+-- Executor HTTP Request Fonksiyonu
+local req = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+if not req then
+    warn("Executor'unuz HTTP request desteklemiyor, AI özellikleri çalışmayabilir!")
 end
 
--- Eski GUI'yi Temizle
+-- Eğer daha önce aynı GUI varsa güvenli biçimde sil
 local existingGui = CoreGui:FindFirstChild("Mars Hub") or CoreGui:FindFirstChild("ProjectGames_System")
-if existingGui then existingGui:Destroy() end
+if existingGui then
+    existingGui:Destroy()
+end
 
 local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ApplyEmmiter")
 
@@ -26,7 +28,7 @@ local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ApplyEmmi
 local PREMIUM_ICON = "rbxassetid://6010710098"
 local VIP_ICON = "rbxassetid://18248037214"
 
--- Emitter Data
+-- [1]=ID, [2]=Arg, [3]=Name, [4]=IconID, [5]=isVIP, [6]=isRP
 local emitterData = {
     {"00000002", "0002FreeWhite", "Free White", "18635845425", false, false},
     {"00000003", "0003FreeYellow", "Free Yellow", "18635841291", false, false},
@@ -43,32 +45,62 @@ local emitterData = {
     {"00000014", "005HeartsPink", "Hearts Pink", "18635726250", true, false},
     {"00000015", "006HeartsRed", "Hearts Red", "18635729673", true, false},
     {"00000016", "010DotsOrange", "Dots Orange", "18637252424", false, true},
+    {"00000017", "011DotsYellow", "Dots Yellow", "18637263004", false, true},
     {"00000018", "012DotsWhite", "Dots White", "18637254199", false, true},
     {"00000019", "013DotsGreen", "Dots Green", "18637265264", false, true},
+    {"00000020", "014DotsBlue", "Dots Blue", "18637256859", false, true},
     {"00000021", "015DotsPurple", "Dots Purple", "18637261058", false, true},
+    {"00000022", "016DotsPink", "Dots Pink", "18637259328", false, true},
     {"00000023", "017DotsRed", "Dots Red", "18637267290", false, true},
+    {"00000024", "020TwinkleWhite", "Twinkle White", "18637115654", true, false},
+    {"00000025", "021TwinkleYellow", "Twinkle Yellow", "18637118923", true, false},
+    {"00000026", "022TwinkleGreen", "Twinkle Green", "18637151114", true, false},
+    {"00000027", "023TwinklePurple", "Twinkle Purple", "18637153880", true, false},
+    {"00000028", "024TwinklePink", "Twinkle Pink", "18637157071", true, false},
+    {"00000029", "025TwinkleRed", "Twinkle Red", "18637155247", true, false},
     {"00000030", "030FireWhite", "Fire White", "18637074370", true, false},
+    {"00000031", "031FireOrange", "Fire Orange", "18637025451", true, false},
+    {"00000032", "032FireGreen", "Fire Green", "18637078598", true, false},
     {"00000033", "033FireBlue", "Fire Blue", "18637076370", true, false},
     {"00000034", "034FirePurple", "Fire Purple", "18637070174", true, false},
+    {"00000035", "035FireBlack", "Fire Black", "18637072603", true, false},
+    {"00000036", "040SmallHeartsYellow", "S-Hearts Yellow", "18637339451", true, false},
+    {"00000037", "041SmallHeartsGreen", "S-Hearts Green", "18637337576", true, false},
+    {"00000038", "042SmallHeartsBlue", "S-Hearts Blue", "18637345162", true, false},
+    {"00000039", "043SmallHeartsPurple", "S-Hearts Purple", "18637335865", true, false},
+    {"00000040", "044SmallHeartsPink", "S-Hearts Pink", "18637343416", true, false},
+    {"00000041", "045SmallHeartsRed", "S-Hearts Red", "18637341847", true, false},
     {"00000042", "050SparksWhite", "Sparks White", "18637383085", true, false},
+    {"00000043", "051SparksGreen", "Sparks Green", "18637385236", true, false},
+    {"00000044", "052SparksBlue", "Sparks Blue", "18637386856", true, false},
     {"00000045", "053SparksPurple", "Sparks Purple", "18637442447", true, false},
+    {"00000046", "054SparksPink", "Sparks Pink", "18637445897", true, false},
     {"00000047", "055SparksRed", "Sparks Red", "18637447550", true, false},
+    {"00000048", "060BubbleWhite", "Bubble White", "18637495023", true, false},
+    {"00000049", "061BubbleGreen", "Bubble Green", "18637493072", true, false},
     {"00000050", "062BubbleBlue", "Bubble Blue", "18637499282", true, false},
+    {"00000051", "063BubblePurple", "Bubble Purple", "18637497343", true, false},
+    {"00000052", "064BubbleRed", "Bubble Red", "18637500927", true, false},
+    {"00000053", "070MusicWhite", "Music White", "18637675173", true, false},
+    {"00000054", "071MusicGreen", "Music Green", "18637677789", true, false},
+    {"00000055", "072MusicBlue", "Music Blue", "18637680960", true, false},
+    {"00000056", "073MusicPurple", "Music Purple", "18637679384", true, false},
+    {"00000057", "074MusicRed", "Music Red", "18637672698", true, false},
+    {"00000058", "080SmokeWhite", "Smoke White", "18637791748", true, false},
+    {"00000059", "081SmokeYellow", "Smoke Yellow", "18637800482", true, false},
+    {"00000060", "082SmokeOrange", "Smoke Orange", "18637793920", true, false},
+    {"00000061", "083SmokeGreen", "Smoke Green", "18637789299", true, false},
+    {"00000062", "084SmokeBlue", "Smoke Blue", "18637803021", true, false},
+    {"00000063", "085SmokePurple", "Smoke Purple", "18637813360", true, false},
+    {"00000064", "086SmokeRed", "Smoke Red", "18637796598", true, false},
     {"00000065", "087SmokeBlack", "Smoke Black", "18637798529", true, false},
+    {"00000066", "090StarWhite", "Star White", "18637942956", true, false},
+    {"00000067", "091StarOrange", "Star Orange", "18637946172", true, false},
+    {"00000068", "092StarGreen", "Star Green", "18637934500", true, false},
     {"00000069", "093StarBlue", "Star Blue", "18637940338", true, false},
+    {"00000070", "094StarPurple", "Star Purple", "18637944796", true, false},
+    {"00000071", "095StarPink", "Star Pink", "18637947820", true, false},
     {"00000072", "096StarRed", "Star Red", "18637949457", true, false},
-}
-
--- Yapılandırma & Temalar
-local config = {
-    apiKeyGemini = "",
-    apiKeyOpenAI = "",
-    activeApi = "Gemini", -- "Gemini" veya "OpenAI"
-    theme = {
-        rgb = true,
-        gradient = true,
-        color = Color3.fromRGB(130, 0, 255)
-    }
 }
 
 -- UI Setup
@@ -76,22 +108,40 @@ local mainGui = Instance.new("ScreenGui")
 mainGui.Name = "Mars Hub"
 mainGui.Parent = CoreGui
 mainGui.ResetOnSpawn = false
+mainGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local function makeSmoothDrag(obj, handle)
-    handle = handle or obj
+local tooltip = Instance.new("TextLabel")
+tooltip.Name = "EmitterTooltip"
+tooltip.Size = UDim2.new(0, 200, 0, 24)
+tooltip.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+tooltip.TextColor3 = Color3.fromRGB(240, 240, 240)
+tooltip.TextSize = 14
+tooltip.Font = Enum.Font.Gotham
+tooltip.Visible = false
+tooltip.BackgroundTransparency = 0.05
+tooltip.AnchorPoint = Vector2.new(0, 0)
+tooltip.Parent = mainGui
+tooltip.ZIndex = 100
+Instance.new("UICorner", tooltip).CornerRadius = UDim.new(0, 6)
+
+local function makeSmoothDrag(obj)
     local dragging, dragInput, dragStart, startPos
-    handle.InputBegan:Connect(function(input)
+    obj.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = obj.Position
             input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
             end)
         end
     end)
-    handle.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+    obj.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
     end)
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
@@ -101,559 +151,693 @@ local function makeSmoothDrag(obj, handle)
     end)
 end
 
--- Tema Listesi (Stroke ve Renkleri güncellemek için)
-local themeElements = {}
-
-local function applyThemeToStroke(strokeObj, gradientObj)
-    table.insert(themeElements, {stroke = strokeObj, grad = gradientObj})
-end
-
 -- Sürüklenebilir Logo
 local openBtn = Instance.new("ImageButton")
+openBtn.Name = "AnimatedProjectButton"
 openBtn.Size = UDim2.new(0, 60, 0, 60)
 openBtn.Position = UDim2.new(0, 15, 0.5, -30)
 openBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 openBtn.Image = "http://www.roblox.com/asset/?id=125614278681229"
 openBtn.Parent = mainGui
+
 Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0, 12)
 local openStroke = Instance.new("UIStroke", openBtn)
 openStroke.Thickness = 2
-local openGrad = Instance.new("UIGradient", openBtn)
-applyThemeToStroke(openStroke, openGrad)
+openStroke.Color = Color3.fromRGB(130, 0, 255)
+
+local gradientLogo = Instance.new("UIGradient", openBtn)
+gradientLogo.Rotation = 90
+
 makeSmoothDrag(openBtn)
 
 -- Ana Panel
 local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 600, 0, 400)
+main.Size = UDim2.new(0.85, 0, 0.75, 0)
 main.AnchorPoint = Vector2.new(0.5, 0.5)
 main.Position = UDim2.new(0.5, 0, 1.5, 0)
-main.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+main.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 main.BorderSizePixel = 0
 main.ClipsDescendants = true
 main.Parent = mainGui
-Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+
+local sizeConst = Instance.new("UISizeConstraint", main)
+sizeConst.MaxSize = Vector2.new(850, 500)
+sizeConst.MinSize = Vector2.new(480, 280)
+
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 15)
 local mainStroke = Instance.new("UIStroke", main)
 mainStroke.Thickness = 2
+
 local mainGrad = Instance.new("UIGradient", mainStroke)
-applyThemeToStroke(mainStroke, mainGrad)
+mainGrad.Color = ColorSequence.new(Color3.fromRGB(255, 85, 0), Color3.fromRGB(50, 10, 0))
+
 makeSmoothDrag(main)
 
--- Ana Üst Bar
+-- Başlık & Araç Çubuğu
 local top = Instance.new("Frame")
-top.Size = UDim2.new(1, 0, 0, 50)
+top.Size = UDim2.new(1, 0, 0, 55)
 top.BackgroundTransparency = 1
 top.Parent = main
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0.4, 0, 1, 0)
-title.Position = UDim2.new(0, 15, 0, 0)
-title.Text = "⭐ Mars Hub | Emitters"
+title.Position = UDim2.new(0, 20, 0, 0)
+title.Text = "⭐ Mars Hub Emmiters ⭐"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 16
+title.TextSize = 17
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.BackgroundTransparency = 1
 title.Parent = top
 
 local close = Instance.new("TextButton")
-close.Size = UDim2.new(0, 30, 0, 30)
+close.Size = UDim2.new(0, 35, 0, 35)
 close.AnchorPoint = Vector2.new(1, 0.5)
-close.Position = UDim2.new(1, -10, 0.5, 0)
+close.Position = UDim2.new(1, -15, 0.5, 0)
 close.Text = "×"
-close.TextColor3 = Color3.fromRGB(255, 80, 80)
+close.TextColor3 = Color3.fromRGB(255, 60, 60)
 close.Font = Enum.Font.GothamBold
-close.TextSize = 24
+close.TextSize = 30
 close.BackgroundTransparency = 1
 close.Parent = top
 
 local searchBar = Instance.new("TextBox")
-searchBar.Size = UDim2.new(0, 120, 0, 28)
+searchBar.Size = UDim2.new(0, 130, 0, 30)
 searchBar.AnchorPoint = Vector2.new(1, 0.5)
-searchBar.Position = UDim2.new(1, -50, 0.5, 0)
-searchBar.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+searchBar.Position = UDim2.new(1, -60, 0.5, 0)
+searchBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 searchBar.TextColor3 = Color3.fromRGB(255, 255, 255)
 searchBar.PlaceholderText = "Search..."
 searchBar.Font = Enum.Font.Gotham
 searchBar.TextSize = 12
+searchBar.ClearTextOnFocus = false
 searchBar.Parent = top
 Instance.new("UICorner", searchBar).CornerRadius = UDim.new(0, 6)
+local searchStroke = Instance.new("UIStroke", searchBar)
+searchStroke.Color = Color3.fromRGB(40, 40, 45)
 
--- YENİ: AI Butonu
+-- Yeni AI Butonu (Eski Offline Butonu Yerine)
 local aiBtn = Instance.new("TextButton")
-aiBtn.Size = UDim2.new(0, 80, 0, 28)
+aiBtn.Size = UDim2.new(0, 80, 0, 30)
 aiBtn.AnchorPoint = Vector2.new(1, 0.5)
-aiBtn.Position = UDim2.new(1, -180, 0.5, 0)
-aiBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-aiBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+aiBtn.Position = UDim2.new(1, -200, 0.5, 0)
+aiBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+aiBtn.TextColor3 = Color3.fromRGB(85, 170, 255)
 aiBtn.Text = "🤖 AI Chat"
 aiBtn.Font = Enum.Font.GothamBold
 aiBtn.TextSize = 12
 aiBtn.Parent = top
 Instance.new("UICorner", aiBtn).CornerRadius = UDim.new(0, 6)
-local aiBtnStroke = Instance.new("UIStroke", aiBtn)
-local aiBtnGrad = Instance.new("UIGradient", aiBtnStroke)
-applyThemeToStroke(aiBtnStroke, aiBtnGrad)
+local aiStroke = Instance.new("UIStroke", aiBtn)
+aiStroke.Color = Color3.fromRGB(40, 40, 45)
 
--- Emitter Scroll Alanı
+-- Scroll Alanı (Emitterlar)
 local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, -20, 1, -60)
-scroll.Position = UDim2.new(0, 10, 0, 50)
+scroll.Size = UDim2.new(1, -15, 1, -70)
+scroll.Position = UDim2.new(0, 10, 0, 60)
 scroll.BackgroundTransparency = 1
 scroll.ScrollBarThickness = 2
+scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 85, 0)
 scroll.Parent = main
-local listLayout = Instance.new("UIListLayout", scroll)
-listLayout.Padding = UDim.new(0, 15)
 
-local function createCategory(name)
+local listLayout = Instance.new("UIListLayout", scroll)
+listLayout.Padding = UDim.new(0, 20)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local function createCategory(name, order)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.Size = UDim2.new(1, -10, 0, 40)
     frame.BackgroundTransparency = 1
+    frame.LayoutOrder = order
     frame.Parent = scroll
+    
     local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 1, 0)
-    lbl.Text = "  " .. name
-    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lbl.Size = UDim2.new(1, 0, 0, 30)
+    lbl.Text = "  " .. name:upper()
+    lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
     lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 14
+    lbl.TextSize = 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     lbl.Parent = frame
     Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 6)
+    
     local container = Instance.new("Frame")
+    container.Name = "Container"
     container.Size = UDim2.new(1, 0, 0, 0)
     container.Position = UDim2.new(0, 0, 0, 40)
     container.BackgroundTransparency = 1
     container.Parent = frame
+    
     local grid = Instance.new("UIGridLayout", container)
-    grid.CellSize = UDim2.new(0, 110, 0, 130)
+    grid.CellSize = UDim2.new(0, 130, 0, 145)
     grid.CellPadding = UDim2.new(0, 10, 0, 10)
     grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    
     grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         container.Size = UDim2.new(1, 0, 0, grid.AbsoluteContentSize.Y)
-        frame.Size = UDim2.new(1, 0, 0, grid.AbsoluteContentSize.Y + 50)
+        frame.Size = UDim2.new(1, -10, 0, grid.AbsoluteContentSize.Y + 50)
     end)
     return container
 end
 
-local freeCont = createCategory("Free Emitters")
-local premiumCont = createCategory("VIP / Premium")
+local freeCont = createCategory("Free Emitters", 1)
+local premiumCont = createCategory("Emitters (VIP & Premium)", 2)
+
 local cardTable = {}
 
--- Emitterleri Uygulama
 local function applyEmitterSafe(id, arg)
     task.spawn(function()
-        pcall(function() if remote then remote:InvokeServer(id, arg) end end)
+        pcall(function()
+            if remote and remote.Parent then
+                remote:InvokeServer(id, arg)
+            end
+        end)
     end)
 end
 
 for _, d in ipairs(emitterData) do
     local card = Instance.new("TextButton")
-    card.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    card.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
     card.Text = ""
     card.Parent = (d[5] or d[6]) and premiumCont or freeCont
-    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
-    cardTable[card] = d[3]:lower()
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
     
+    local stroke = Instance.new("UIStroke", card)
+    stroke.Color = Color3.fromRGB(40, 40, 45)
+
+    cardTable[card] = d[3]:lower()
+
     local img = Instance.new("ImageLabel")
-    img.Size = UDim2.new(0, 50, 0, 50)
-    img.Position = UDim2.new(0.5, -25, 0, 15)
+    img.Size = UDim2.new(0, 60, 0, 60)
+    img.Position = UDim2.new(0.5, -30, 0, 15)
     img.Image = "rbxassetid://" .. d[4]
     img.BackgroundTransparency = 1
     img.Parent = card
 
     local t = Instance.new("TextLabel")
-    t.Size = UDim2.new(1, -10, 0, 20)
-    t.Position = UDim2.new(0, 5, 1, -30)
+    t.Size = UDim2.new(1, -10, 0, 30)
+    t.Position = UDim2.new(0, 5, 1, -40)
     t.Text = d[3]
-    t.TextColor3 = Color3.fromRGB(220, 220, 220)
+    t.TextColor3 = Color3.fromRGB(200, 200, 200)
     t.Font = Enum.Font.GothamSemibold
     t.TextSize = 10
     t.BackgroundTransparency = 1
     t.Parent = card
 
-    card.MouseButton1Click:Connect(function() applyEmitterSafe(d[1], d[2]) end)
+    if d[5] then
+        local vLogo = Instance.new("ImageLabel")
+        vLogo.Size = UDim2.new(0, 26, 0, 26)
+        vLogo.Position = UDim2.new(1, -28, 1, -28)
+        vLogo.Image = VIP_ICON
+        vLogo.BackgroundTransparency = 1
+        vLogo.Parent = card
+    elseif d[6] then
+        local rLogo = Instance.new("ImageLabel")
+        rLogo.Size = UDim2.new(0, 26, 0, 26)
+        rLogo.Position = UDim2.new(1, -28, 1, -28)
+        rLogo.Image = PREMIUM_ICON
+        rLogo.BackgroundTransparency = 1
+        rLogo.Parent = card
+    end
+
+    card.MouseEnter:Connect(function()
+        tooltip.Text = d[3]
+        local mousePos = UserInputService:GetMouseLocation()
+        tooltip.Position = UDim2.new(0, mousePos.X + 10, 0, mousePos.Y + 10)
+        tooltip.Visible = true
+    end)
+    card.MouseLeave:Connect(function() tooltip.Visible = false end)
+
+    card.MouseButton1Click:Connect(function()
+        for c, _ in pairs(cardTable) do
+            if c:FindFirstChild("UIStroke") then c.UIStroke.Color = Color3.fromRGB(40, 40, 45) end
+        end
+        stroke.Color = Color3.fromRGB(255, 85, 0)
+        applyEmitterSafe(d[1], d[2])
+    end)
 end
 
 searchBar:GetPropertyChangedSignal("Text"):Connect(function()
     local text = searchBar.Text:lower()
     for cardObj, name in pairs(cardTable) do
-        cardObj.Visible = (text == "" or string.find(name, text, 1, true)) ~= nil
+        cardObj.Visible = (text == "" or string.find(name, text, 1, true) ~= nil)
     end
     scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 40)
 end)
 
---------------------------------------------------
--- YENİ: AI SOHBET VE AYARLAR ARAYÜZÜ
---------------------------------------------------
-local aiPanel = Instance.new("Frame")
-aiPanel.Size = UDim2.new(0, 450, 0, 350)
-aiPanel.Position = UDim2.new(0.5, -225, 0.5, -175)
-aiPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-aiPanel.Visible = false
-aiPanel.ClipsDescendants = true
-aiPanel.Parent = mainGui
-Instance.new("UICorner", aiPanel).CornerRadius = UDim.new(0, 10)
-local aiMainStroke = Instance.new("UIStroke", aiPanel)
-aiMainStroke.Thickness = 2
-local aiMainGrad = Instance.new("UIGradient", aiMainStroke)
-applyThemeToStroke(aiMainStroke, aiMainGrad)
-makeSmoothDrag(aiPanel)
-
-local aiTop = Instance.new("Frame")
-aiTop.Size = UDim2.new(1, 0, 0, 40)
-aiTop.BackgroundTransparency = 1
-aiTop.Parent = aiPanel
-
-local aiTitle = Instance.new("TextLabel")
-aiTitle.Size = UDim2.new(0.5, 0, 1, 0)
-aiTitle.Position = UDim2.new(0, 15, 0, 0)
-aiTitle.Text = "Mars AI Assistant"
-aiTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-aiTitle.Font = Enum.Font.GothamBold
-aiTitle.TextSize = 14
-aiTitle.TextXAlignment = Enum.TextXAlignment.Left
-aiTitle.BackgroundTransparency = 1
-aiTitle.Parent = aiTop
-
-local function createTopButton(text, posOffset, sizeX, sizeY)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, sizeX, 0, sizeY)
-    btn.AnchorPoint = Vector2.new(1, 0.5)
-    btn.Position = UDim2.new(1, posOffset, 0.5, 0)
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 16
-    btn.BackgroundTransparency = 1
-    btn.Parent = aiTop
-    return btn
-end
-
-local aiClose = createTopButton("×", -10, 30, 30)
-local aiMin = createTopButton("-", -40, 30, 30)
-local aiSettingsBtn = createTopButton("⚙", -70, 30, 30)
-
-local chatArea = Instance.new("ScrollingFrame")
-chatArea.Size = UDim2.new(1, -20, 1, -100)
-chatArea.Position = UDim2.new(0, 10, 0, 45)
-chatArea.BackgroundTransparency = 1
-chatArea.ScrollBarThickness = 2
-chatArea.Parent = aiPanel
-local chatLayout = Instance.new("UIListLayout", chatArea)
-chatLayout.Padding = UDim.new(0, 8)
-
-local inputFrame = Instance.new("Frame")
-inputFrame.Size = UDim2.new(1, -20, 0, 40)
-inputFrame.Position = UDim2.new(0, 10, 1, -50)
-inputFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-inputFrame.Parent = aiPanel
-Instance.new("UICorner", inputFrame).CornerRadius = UDim.new(0, 8)
-
-local chatInput = Instance.new("TextBox")
-chatInput.Size = UDim2.new(1, -70, 1, 0)
-chatInput.Position = UDim2.new(0, 10, 0, 0)
-chatInput.BackgroundTransparency = 1
-chatInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-chatInput.PlaceholderText = "Mesaj yaz..."
-chatInput.Font = Enum.Font.Gotham
-chatInput.TextSize = 13
-chatInput.TextXAlignment = Enum.TextXAlignment.Left
-chatInput.Parent = inputFrame
-
-local sendBtn = Instance.new("TextButton")
-sendBtn.Size = UDim2.new(0, 50, 0, 30)
-sendBtn.AnchorPoint = Vector2.new(1, 0.5)
-sendBtn.Position = UDim2.new(1, -5, 0.5, 0)
-sendBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-sendBtn.Text = "Gönder"
-sendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-sendBtn.Font = Enum.Font.GothamBold
-sendBtn.TextSize = 11
-sendBtn.Parent = inputFrame
-Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(0, 6)
-local sendStroke = Instance.new("UIStroke", sendBtn)
-local sendGrad = Instance.new("UIGradient", sendStroke)
-applyThemeToStroke(sendStroke, sendGrad)
-
--- Ayarlar Paneli
-local settingsPanel = Instance.new("Frame")
-settingsPanel.Size = UDim2.new(1, 0, 1, -40)
-settingsPanel.Position = UDim2.new(0, 0, 0, 40)
-settingsPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-settingsPanel.Visible = false
-settingsPanel.Parent = aiPanel
-
-local function createSettingInput(titleTxt, yPos, placeholder)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -20, 0, 20)
-    lbl.Position = UDim2.new(0, 10, 0, yPos)
-    lbl.Text = titleTxt
-    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
-    lbl.Font = Enum.Font.GothamSemibold
-    lbl.TextSize = 12
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.BackgroundTransparency = 1
-    lbl.Parent = settingsPanel
-    
-    local box = Instance.new("TextBox")
-    box.Size = UDim2.new(1, -20, 0, 30)
-    box.Position = UDim2.new(0, 10, 0, yPos + 25)
-    box.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    box.TextColor3 = Color3.fromRGB(255, 255, 255)
-    box.PlaceholderText = placeholder
-    box.Font = Enum.Font.Gotham
-    box.TextSize = 12
-    box.Parent = settingsPanel
-    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
-    return box
-end
-
-local geminiBox = createSettingInput("Gemini API Key (AI Studio)", 10, "Gemini Key buraya...")
-local openaiBox = createSettingInput("OpenAI API Key (ChatGPT)", 75, "sk-proj-... buraya...")
-
-local apiToggleBtn = Instance.new("TextButton")
-apiToggleBtn.Size = UDim2.new(1, -20, 0, 30)
-apiToggleBtn.Position = UDim2.new(0, 10, 0, 140)
-apiToggleBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-apiToggleBtn.Text = "Aktif AI: " .. config.activeApi
-apiToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-apiToggleBtn.Font = Enum.Font.GothamBold
-apiToggleBtn.TextSize = 12
-apiToggleBtn.Parent = settingsPanel
-Instance.new("UICorner", apiToggleBtn).CornerRadius = UDim.new(0, 6)
-
-local themeToggleBtn = Instance.new("TextButton")
-themeToggleBtn.Size = UDim2.new(0.5, -15, 0, 30)
-themeToggleBtn.Position = UDim2.new(0, 10, 0, 180)
-themeToggleBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-themeToggleBtn.Text = "RGB (Rainbow): AÇIK"
-themeToggleBtn.TextColor3 = Color3.fromRGB(85, 255, 85)
-themeToggleBtn.Font = Enum.Font.GothamBold
-themeToggleBtn.TextSize = 11
-themeToggleBtn.Parent = settingsPanel
-Instance.new("UICorner", themeToggleBtn).CornerRadius = UDim.new(0, 6)
-
-local gradToggleBtn = Instance.new("TextButton")
-gradToggleBtn.Size = UDim2.new(0.5, -15, 0, 30)
-gradToggleBtn.Position = UDim2.new(0.5, 5, 0, 180)
-gradToggleBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-gradToggleBtn.Text = "Gradient: AÇIK"
-gradToggleBtn.TextColor3 = Color3.fromRGB(85, 255, 85)
-gradToggleBtn.Font = Enum.Font.GothamBold
-gradToggleBtn.TextSize = 11
-gradToggleBtn.Parent = settingsPanel
-Instance.new("UICorner", gradToggleBtn).CornerRadius = UDim.new(0, 6)
-
-local colorInput = createSettingInput("Özel Renk (Hex Kodu, örn: #ff0000) [Sadece RGB Kapalıyken]", 220, "Hex kodu girin...")
-
-local saveBtn = Instance.new("TextButton")
-saveBtn.Size = UDim2.new(1, -20, 0, 35)
-saveBtn.Position = UDim2.new(0, 10, 1, -45)
-saveBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 80)
-saveBtn.Text = "Ayarları Kaydet"
-saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-saveBtn.Font = Enum.Font.GothamBold
-saveBtn.TextSize = 13
-saveBtn.Parent = settingsPanel
-Instance.new("UICorner", saveBtn).CornerRadius = UDim.new(0, 6)
-
--- Ayar Fonksiyonları
-apiToggleBtn.MouseButton1Click:Connect(function()
-    config.activeApi = (config.activeApi == "Gemini") and "OpenAI" or "Gemini"
-    apiToggleBtn.Text = "Aktif AI: " .. config.activeApi
+listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 40)
 end)
 
-themeToggleBtn.MouseButton1Click:Connect(function()
-    config.theme.rgb = not config.theme.rgb
-    themeToggleBtn.Text = config.theme.rgb and "RGB (Rainbow): AÇIK" or "RGB (Rainbow): KAPALI"
-    themeToggleBtn.TextColor3 = config.theme.rgb and Color3.fromRGB(85, 255, 85) or Color3.fromRGB(255, 85, 85)
-end)
-
-gradToggleBtn.MouseButton1Click:Connect(function()
-    config.theme.gradient = not config.theme.gradient
-    gradToggleBtn.Text = config.theme.gradient and "Gradient: AÇIK" or "Gradient: KAPALI"
-    gradToggleBtn.TextColor3 = config.theme.gradient and Color3.fromRGB(85, 255, 85) or Color3.fromRGB(255, 85, 85)
-end)
-
-saveBtn.MouseButton1Click:Connect(function()
-    config.apiKeyGemini = geminiBox.Text
-    config.apiKeyOpenAI = openaiBox.Text
-    if colorInput.Text ~= "" and colorInput.Text:match("^#") then
-        pcall(function() config.theme.color = Color3.fromHex(colorInput.Text) end)
-    end
-    saveBtn.Text = "Kaydedildi!"
-    task.wait(1)
-    saveBtn.Text = "Ayarları Kaydet"
-end)
-
--- Mesaj Ekleme
-local function addChatMessage(sender, text, isError)
-    local msgFrame = Instance.new("Frame")
-    msgFrame.Size = UDim2.new(1, 0, 0, 0)
-    msgFrame.BackgroundTransparency = 1
-    msgFrame.Parent = chatArea
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -10, 0, 0)
-    lbl.Position = UDim2.new(0, 5, 0, 0)
-    lbl.Text = "**" .. sender .. "**: " .. text
-    lbl.TextColor3 = isError and Color3.fromRGB(255, 80, 80) or (sender == "Sen" and Color3.fromRGB(200, 200, 255) or Color3.fromRGB(255, 255, 255))
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 12
-    lbl.TextWrapped = true
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.BackgroundTransparency = 1
-    lbl.Parent = msgFrame
-
-    lbl.Size = UDim2.new(1, -10, 0, lbl.TextBounds.Y + 10)
-    msgFrame.Size = UDim2.new(1, 0, 0, lbl.TextBounds.Y + 10)
-    chatArea.CanvasSize = UDim2.new(0, 0, 0, chatLayout.AbsoluteContentSize.Y + 10)
-    chatArea.CanvasPosition = Vector2.new(0, 9999)
-end
-
--- Yapay Zeka API İstekleri
-local function sendToAI(userText)
-    addChatMessage("Sen", userText)
-    chatInput.Text = ""
-    addChatMessage("Sistem", config.activeApi .. " düşünülüyor...", false)
-    
-    task.spawn(function()
-        if not requestFunc then
-            addChatMessage("Hata", "Executor HTTP desteklemiyor!", true)
-            return
-        end
-
-        local responseText = "Bir hata oluştu."
-        if config.activeApi == "Gemini" then
-            if config.apiKeyGemini == "" then addChatMessage("Hata", "Gemini API Key eksik! Ayarlardan girin.", true) return end
-            local url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" .. config.apiKeyGemini
-            local payload = { contents = { { parts = { { text = userText } } } } }
-            local res = requestFunc({
-                Url = url,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = HttpService:JSONEncode(payload)
-            })
-            if res and res.Body then
-                local data = HttpService:JSONDecode(res.Body)
-                if data.candidates and data.candidates[1] then
-                    responseText = data.candidates[1].content.parts[1].text
-                else
-                    responseText = "API Hatası: " .. tostring(res.Body)
-                end
-            end
-
-        elseif config.activeApi == "OpenAI" then
-            if config.apiKeyOpenAI == "" then addChatMessage("Hata", "OpenAI API Key eksik! Ayarlardan girin.", true) return end
-            local url = "https://api.openai.com/v1/chat/completions"
-            local payload = {
-                model = "gpt-3.5-turbo",
-                messages = { { role = "user", content = userText } }
-            }
-            local res = requestFunc({
-                Url = url,
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json",
-                    ["Authorization"] = "Bearer " .. config.apiKeyOpenAI
-                },
-                Body = HttpService:JSONEncode(payload)
-            })
-            if res and res.Body then
-                local data = HttpService:JSONDecode(res.Body)
-                if data.choices and data.choices[1] then
-                    responseText = data.choices[1].message.content
-                else
-                    responseText = "API Hatası: " .. tostring(res.Body)
-                end
-            end
-        end
-
-        addChatMessage(config.activeApi, responseText)
-    end)
-end
-
-sendBtn.MouseButton1Click:Connect(function()
-    if chatInput.Text ~= "" then sendToAI(chatInput.Text) end
-end)
-chatInput.FocusLost:Connect(function(enter)
-    if enter and chatInput.Text ~= "" then sendToAI(chatInput.Text) end
-end)
-
--- UI Animasyonları & Butonlar
-local aiOpen = false
-aiBtn.MouseButton1Click:Connect(function()
-    aiOpen = not aiOpen
-    aiPanel.Visible = aiOpen
-end)
-
-aiClose.MouseButton1Click:Connect(function()
-    aiOpen = false
-    aiPanel.Visible = false
-end)
-
-local aiMinimized = false
-aiMin.MouseButton1Click:Connect(function()
-    aiMinimized = not aiMinimized
-    if aiMinimized then
-        aiPanel:TweenSize(UDim2.new(0, 450, 0, 40), "Out", "Quad", 0.3, true)
-    else
-        aiPanel:TweenSize(UDim2.new(0, 450, 0, 350), "Out", "Quad", 0.3, true)
-    end
-end)
-
-local settingsOpen = false
-aiSettingsBtn.MouseButton1Click:Connect(function()
-    settingsOpen = not settingsOpen
-    settingsPanel.Visible = settingsOpen
-    chatArea.Visible = not settingsOpen
-    inputFrame.Visible = not settingsOpen
-end)
-
+-- Tween & Toggle (Emitters)
 local open = false
 local function toggleUI()
     open = not open
     main:TweenPosition(open and UDim2.new(0.5, 0, 0.5, 0) or UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
 end
-
 openBtn.MouseButton1Click:Connect(toggleUI)
 close.MouseButton1Click:Connect(toggleUI)
 
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.M then toggleUI() end
+
+---------------------------------------------------------------------
+-- AI PANEL & SETTINGS & THEME SYSTEM
+---------------------------------------------------------------------
+
+-- Configuration System
+local ThemeSettings = {
+    RGBEnabled = false,
+    GradientEnabled = true,
+    CustomColor = Color3.fromRGB(255, 85, 0)
+}
+local AISettings = {
+    ActiveAI = "Gemini",
+    GeminiKey = "",
+    OpenAIKey = ""
+}
+
+local function saveSettings()
+    if writefile then
+        pcall(function()
+            local data = HttpService:JSONEncode({
+                Theme = {RGB = ThemeSettings.RGBEnabled, Gradient = ThemeSettings.GradientEnabled, R=ThemeSettings.CustomColor.R, G=ThemeSettings.CustomColor.G, B=ThemeSettings.CustomColor.B},
+                AI = AISettings
+            })
+            writefile("MarsHub_Config.json", data)
+        end)
+    end
+end
+
+local function loadSettings()
+    if readfile and isfile and isfile("MarsHub_Config.json") then
+        pcall(function()
+            local data = HttpService:JSONDecode(readfile("MarsHub_Config.json"))
+            if data then
+                if data.Theme then
+                    ThemeSettings.RGBEnabled = data.Theme.RGB
+                    ThemeSettings.GradientEnabled = data.Theme.Gradient
+                    ThemeSettings.CustomColor = Color3.new(data.Theme.R, data.Theme.G, data.Theme.B)
+                end
+                if data.AI then
+                    AISettings = data.AI
+                end
+            end
+        end)
+    end
+end
+loadSettings()
+
+-- AI Ana Çerçevesi
+local aiGui = Instance.new("Frame")
+aiGui.Size = UDim2.new(0, 450, 0, 350)
+aiGui.Position = UDim2.new(0.5, 0, 1.5, 0)
+aiGui.AnchorPoint = Vector2.new(0.5, 0.5)
+aiGui.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+aiGui.ClipsDescendants = true
+aiGui.Parent = mainGui
+Instance.new("UICorner", aiGui).CornerRadius = UDim.new(0, 12)
+
+local aiGuiStroke = Instance.new("UIStroke", aiGui)
+aiGuiStroke.Thickness = 2
+local aiGrad = Instance.new("UIGradient", aiGuiStroke)
+aiGrad.Color = ColorSequence.new(Color3.fromRGB(85, 170, 255), Color3.fromRGB(0, 50, 150))
+
+makeSmoothDrag(aiGui)
+
+-- AI Üst Bar
+local aiTop = Instance.new("Frame")
+aiTop.Size = UDim2.new(1, 0, 0, 40)
+aiTop.BackgroundTransparency = 1
+aiTop.Parent = aiGui
+
+local aiTitle = Instance.new("TextLabel")
+aiTitle.Size = UDim2.new(0.5, 0, 1, 0)
+aiTitle.Position = UDim2.new(0, 15, 0, 0)
+aiTitle.Text = "🤖 Mars AI Assistant"
+aiTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+aiTitle.Font = Enum.Font.GothamBold
+aiTitle.TextSize = 15
+aiTitle.TextXAlignment = Enum.TextXAlignment.Left
+aiTitle.BackgroundTransparency = 1
+aiTitle.Parent = aiTop
+
+local aiClose = Instance.new("TextButton")
+aiClose.Size = UDim2.new(0, 30, 0, 30)
+aiClose.Position = UDim2.new(1, -35, 0.5, -15)
+aiClose.Text = "×"
+aiClose.TextColor3 = Color3.fromRGB(255, 60, 60)
+aiClose.Font = Enum.Font.GothamBold
+aiClose.TextSize = 24
+aiClose.BackgroundTransparency = 1
+aiClose.Parent = aiTop
+
+local aiMin = Instance.new("TextButton")
+aiMin.Size = UDim2.new(0, 30, 0, 30)
+aiMin.Position = UDim2.new(1, -70, 0.5, -15)
+aiMin.Text = "-"
+aiMin.TextColor3 = Color3.fromRGB(255, 255, 255)
+aiMin.Font = Enum.Font.GothamBold
+aiMin.TextSize = 24
+aiMin.BackgroundTransparency = 1
+aiMin.Parent = aiTop
+
+local aiSettingsBtn = Instance.new("TextButton")
+aiSettingsBtn.Size = UDim2.new(0, 30, 0, 30)
+aiSettingsBtn.Position = UDim2.new(1, -105, 0.5, -15)
+aiSettingsBtn.Text = "⚙️"
+aiSettingsBtn.BackgroundTransparency = 1
+aiSettingsBtn.Parent = aiTop
+
+-- İçerik Çerçeveleri
+local chatFrame = Instance.new("Frame")
+chatFrame.Size = UDim2.new(1, 0, 1, -40)
+chatFrame.Position = UDim2.new(0, 0, 0, 40)
+chatFrame.BackgroundTransparency = 1
+chatFrame.Parent = aiGui
+
+local settingsFrame = Instance.new("Frame")
+settingsFrame.Size = UDim2.new(1, 0, 1, -40)
+settingsFrame.Position = UDim2.new(0, 0, 0, 40)
+settingsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+settingsFrame.Visible = false
+settingsFrame.Parent = aiGui
+
+-- ÇAT SİSTEMİ EKRANI
+local chatScroll = Instance.new("ScrollingFrame")
+chatScroll.Size = UDim2.new(1, -20, 1, -60)
+chatScroll.Position = UDim2.new(0, 10, 0, 5)
+chatScroll.BackgroundTransparency = 1
+chatScroll.ScrollBarThickness = 2
+chatScroll.Parent = chatFrame
+
+local chatLayout = Instance.new("UIListLayout", chatScroll)
+chatLayout.Padding = UDim.new(0, 5)
+chatLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local chatInput = Instance.new("TextBox")
+chatInput.Size = UDim2.new(1, -70, 0, 40)
+chatInput.Position = UDim2.new(0, 10, 1, -50)
+chatInput.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+chatInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+chatInput.PlaceholderText = "Type here... (ex: scriptblox admin script)"
+chatInput.Font = Enum.Font.Gotham
+chatInput.TextSize = 13
+chatInput.TextWrapped = true
+chatInput.ClearTextOnFocus = false
+chatInput.Parent = chatFrame
+Instance.new("UICorner", chatInput).CornerRadius = UDim.new(0, 6)
+
+local chatSend = Instance.new("TextButton")
+chatSend.Size = UDim2.new(0, 50, 0, 40)
+chatSend.Position = UDim2.new(1, -60, 1, -50)
+chatSend.BackgroundColor3 = Color3.fromRGB(85, 170, 255)
+chatSend.TextColor3 = Color3.fromRGB(255, 255, 255)
+chatSend.Text = "Send"
+chatSend.Font = Enum.Font.GothamBold
+chatSend.TextSize = 13
+chatSend.Parent = chatFrame
+Instance.new("UICorner", chatSend).CornerRadius = UDim.new(0, 6)
+
+-- SETTINGS EKRANI (API & TEMA)
+local setList = Instance.new("UIListLayout", settingsFrame)
+setList.Padding = UDim.new(0, 10)
+setList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local spacer = Instance.new("Frame", settingsFrame)
+spacer.Size = UDim2.new(1,0,0,5); spacer.BackgroundTransparency=1
+
+local function makeInput(ph, txt)
+    local tb = Instance.new("TextBox")
+    tb.Size = UDim2.new(0.9, 0, 0, 35)
+    tb.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    tb.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tb.PlaceholderText = ph
+    tb.Text = txt
+    tb.Font = Enum.Font.Gotham
+    tb.TextSize = 12
+    tb.Parent = settingsFrame
+    Instance.new("UICorner", tb).CornerRadius = UDim.new(0, 6)
+    return tb
+end
+
+local function makeBtn(txt)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = txt
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.Parent = settingsFrame
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    return btn
+end
+
+local geminiBox = makeInput("Gemini API Key...", AISettings.GeminiKey)
+local openaiBox = makeInput("OpenAI API Key...", AISettings.OpenAIKey)
+local selectAIBtn = makeBtn("Active AI: " .. AISettings.ActiveAI)
+local rgbBtn = makeBtn("Rainbow RGB: " .. tostring(ThemeSettings.RGBEnabled))
+local gradientBtn = makeBtn("Gradient Mode: " .. tostring(ThemeSettings.GradientEnabled))
+local saveBtn = makeBtn("Save Configuration & Apply")
+saveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
+
+-- Chat Fonksiyonları
+local function addMessage(sender, text, color)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -10, 0, 0)
+    frame.BackgroundTransparency = 1
+    frame.Parent = chatScroll
+    
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 0)
+    lbl.TextWrapped = true
+    lbl.Text = "**" .. sender .. ":** " .. text
+    lbl.TextColor3 = color or Color3.fromRGB(255, 255, 255)
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.BackgroundTransparency = 1
+    lbl.AutomaticSize = Enum.AutomaticSize.Y
+    lbl.Parent = frame
+    
+    frame.AutomaticSize = Enum.AutomaticSize.Y
+    
+    task.delay(0.1, function()
+        chatScroll.CanvasPosition = Vector2.new(0, chatLayout.AbsoluteContentSize.Y)
+    end)
+end
+
+-- ScriptBlox API Entegrasyonu
+local function fetchScriptBlox(query)
+    if not req then return "HTTP request desteklenmiyor." end
+    local response = req({
+        Url = "https://scriptblox.com/api/script/search?q=" .. HttpService:UrlEncode(query) .. "&max=1",
+        Method = "GET"
+    })
+    
+    if response and response.StatusCode == 200 then
+        local data = HttpService:JSONDecode(response.Body)
+        if data and data.result and data.result.scripts and #data.result.scripts > 0 then
+            local scriptData = data.result.scripts[1]
+            local title = scriptData.title
+            local code = scriptData.script
+            return "Found on ScriptBlox:\n" .. title .. "\n```lua\n" .. code .. "\n```"
+        else
+            return "ScriptBlox'ta '" .. query .. "' için sonuç bulunamadı."
+        end
+    end
+    return "ScriptBlox API'ye bağlanırken hata oluştu."
+end
+
+-- AI İstek Yollama Modülü
+local function sendToAI(prompt)
+    if not req then
+        addMessage("System", "Executor HTTP Request desteklemiyor!", Color3.fromRGB(255, 80, 80))
+        return
+    end
+
+    addMessage("You", prompt, Color3.fromRGB(150, 200, 255))
+    chatInput.Text = ""
+
+    -- Eğer kullanıcı direkt scriptblox'tan birşey istiyorsa araya gir
+    if string.find(string.lower(prompt), "scriptblox") then
+        local cleanQuery = string.gsub(string.lower(prompt), "scriptblox", "")
+        cleanQuery = string.gsub(cleanQuery, "script", "")
+        cleanQuery = string.gsub(cleanQuery, "ver", "")
+        cleanQuery = string.match(cleanQuery, "^%s*(.-)%s*$") -- Trim
+        
+        addMessage("System", "ScriptBlox aranıyor: " .. cleanQuery, Color3.fromRGB(200, 200, 200))
+        local result = fetchScriptBlox(cleanQuery)
+        addMessage("Mars AI", result, Color3.fromRGB(85, 255, 85))
+        return
+    end
+
+    local sysPrompt = "Sen 'Mars AI', bir Roblox Exploit ve Luau script geliştirici asistanısın. Kullanıcıya Türkçe yardımcı ol. Script istediğinde her zaman ```lua ... ``` formatında kod ver."
+
+    task.spawn(function()
+        if AISettings.ActiveAI == "Gemini" then
+            if AISettings.GeminiKey == "" then
+                addMessage("System", "Lütfen ayarlardan Gemini API Key girin.", Color3.fromRGB(255, 80, 80))
+                return
+            end
+            
+            local body = {
+                contents = {{ parts = {{ text = sysPrompt .. "\nKullanıcı: " .. prompt }} }}
+            }
+            
+            local res = req({
+                Url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" .. AISettings.GeminiKey,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode(body)
+            })
+            
+            if res.StatusCode == 200 then
+                local dat = HttpService:JSONDecode(res.Body)
+                local txt = dat.candidates[1].content.parts[1].text
+                addMessage("Mars AI (Gemini)", txt, Color3.fromRGB(85, 255, 85))
+            else
+                addMessage("Error", "API Hatası: " .. tostring(res.StatusCode), Color3.fromRGB(255, 0, 0))
+            end
+
+        elseif AISettings.ActiveAI == "OpenAI" then
+            if AISettings.OpenAIKey == "" then
+                addMessage("System", "Lütfen ayarlardan OpenAI API Key girin.", Color3.fromRGB(255, 80, 80))
+                return
+            end
+            
+            local body = {
+                model = "gpt-3.5-turbo",
+                messages = {
+                    {role = "system", content = sysPrompt},
+                    {role = "user", content = prompt}
+                }
+            }
+            
+            local res = req({
+                Url = "https://api.openai.com/v1/chat/completions",
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json",
+                    ["Authorization"] = "Bearer " .. AISettings.OpenAIKey
+                },
+                Body = HttpService:JSONEncode(body)
+            })
+            
+            if res.StatusCode == 200 then
+                local dat = HttpService:JSONDecode(res.Body)
+                local txt = dat.choices[1].message.content
+                addMessage("Mars AI (OpenAI)", txt, Color3.fromRGB(85, 255, 85))
+            else
+                addMessage("Error", "API Hatası: " .. tostring(res.StatusCode), Color3.fromRGB(255, 0, 0))
+            end
+        end
+    end)
+end
+
+chatSend.MouseButton1Click:Connect(function()
+    if chatInput.Text ~= "" then
+        sendToAI(chatInput.Text)
+    end
 end)
 
--- Tema & RGB Döngüsü
-local counter = 0
-RunService.RenderStepped:Connect(function(dt)
-    counter = counter + (dt * 0.5)
+chatInput.FocusLost:Connect(function(enter)
+    if enter and chatInput.Text ~= "" then
+        sendToAI(chatInput.Text)
+    end
+end)
+
+-- Ayarlar Buton Olayları
+selectAIBtn.MouseButton1Click:Connect(function()
+    if AISettings.ActiveAI == "Gemini" then AISettings.ActiveAI = "OpenAI" else AISettings.ActiveAI = "Gemini" end
+    selectAIBtn.Text = "Active AI: " .. AISettings.ActiveAI
+end)
+
+rgbBtn.MouseButton1Click:Connect(function()
+    ThemeSettings.RGBEnabled = not ThemeSettings.RGBEnabled
+    rgbBtn.Text = "Rainbow RGB: " .. tostring(ThemeSettings.RGBEnabled)
+end)
+
+gradientBtn.MouseButton1Click:Connect(function()
+    ThemeSettings.GradientEnabled = not ThemeSettings.GradientEnabled
+    gradientBtn.Text = "Gradient Mode: " .. tostring(ThemeSettings.GradientEnabled)
     
-    local c1, c2
-    if config.theme.rgb then
-        c1 = Color3.fromHSV(math.abs(math.sin(counter)), 1, 1)
-        c2 = Color3.fromHSV(math.abs(math.cos(counter)), 1, 1)
+    if ThemeSettings.GradientEnabled then
+        mainGrad.Enabled = true
+        aiGrad.Enabled = true
     else
-        c1 = config.theme.color
-        c2 = config.theme.color
+        mainGrad.Enabled = false
+        aiGrad.Enabled = false
+        mainStroke.Color = ThemeSettings.CustomColor
+        aiGuiStroke.Color = ThemeSettings.CustomColor
     end
+end)
 
-    local gradientColor
-    if config.theme.gradient then
-        gradientColor = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, c1),
-            ColorSequenceKeypoint.new(1, c2)
-        })
+saveBtn.MouseButton1Click:Connect(function()
+    AISettings.GeminiKey = geminiBox.Text
+    AISettings.OpenAIKey = openaiBox.Text
+    saveSettings()
+    saveBtn.Text = "Saved!"
+    task.wait(1)
+    saveBtn.Text = "Save Configuration & Apply"
+end)
+
+aiSettingsBtn.MouseButton1Click:Connect(function()
+    chatFrame.Visible = not chatFrame.Visible
+    settingsFrame.Visible = not chatFrame.Visible
+end)
+
+-- UI Toggle / Min / Max
+local aiOpen = false
+local minimized = false
+
+aiBtn.MouseButton1Click:Connect(function()
+    aiOpen = not aiOpen
+    aiGui:TweenPosition(aiOpen and UDim2.new(0.5, 0, 0.5, 0) or UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
+end)
+
+aiClose.MouseButton1Click:Connect(function()
+    aiOpen = false
+    aiGui:TweenPosition(UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
+end)
+
+aiMin.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        aiGui:TweenSize(UDim2.new(0, 450, 0, 40), "Out", "Quad", 0.3, true)
+        chatFrame.Visible = false
+        settingsFrame.Visible = false
     else
-        gradientColor = ColorSequence.new(c1)
+        aiGui:TweenSize(UDim2.new(0, 450, 0, 350), "Out", "Quad", 0.3, true)
+        chatFrame.Visible = true
     end
+end)
 
-    for _, elem in ipairs(themeElements) do
-        if elem.grad then
-            elem.grad.Color = gradientColor
+-- Renk (Theme) Motoru
+task.spawn(function()
+    local hue = 0
+    while RunService.RenderStepped:Wait() do
+        if ThemeSettings.RGBEnabled then
+            hue = hue + 0.005
+            if hue >= 1 then hue = 0 end
+            local color1 = Color3.fromHSV(hue, 1, 1)
+            local color2 = Color3.fromHSV((hue + 0.5) % 1, 1, 1)
+            
+            if ThemeSettings.GradientEnabled then
+                mainGrad.Color = ColorSequence.new(color1, color2)
+                aiGrad.Color = ColorSequence.new(color1, color2)
+            else
+                mainStroke.Color = color1
+                aiGuiStroke.Color = color1
+            end
         end
-        if not config.theme.gradient and elem.stroke then
-            elem.stroke.Color = c1
-        end
+    end
+end)
+
+-- Klavye kısayolu M Tuşu (Sadece ana menüyü açıp kapar, AI menüsü AI butonuyla açılır)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.M then
+        toggleUI()
     end
 end)
