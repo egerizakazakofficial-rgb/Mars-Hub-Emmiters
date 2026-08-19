@@ -1,132 +1,49 @@
--- main.lua
--- Merged: Mars Hub Emitters + Mars Hub AI Chat
--- Finalized: emitter & AI toggles fixed, quick-AI, max default, ReplicatedStorage key detection, single-key auto-provider, typing indicator, timeout, robustness.
+-- Merged: Project Games Emitters V12 + Mars Hub AI Chat
+-- Keep emitter code intact; AI UI appended and integrated (Quick AI + Header AI button).
+-- AI auto-selects provider if only one key present (OpenAI preferred), typing indicator, 25s timeout.
+-- Place this as your main.lua
 
+-- ========== SERVICES ==========
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+
+-- Additional services used by AI
 local HttpService = game:GetService("HttpService")
 local DataStoreService = game:GetService("DataStoreService")
 local TextService = game:GetService("TextService")
 
--- Safe trim
+-- ========== SAFE TRIM ==========
 local function trim(s) if not s then return "" end return s:match("^%s*(.-)%s*$") or "" end
 
--- Cleanup old GUI if present
-if CoreGui:FindFirstChild("ProjectGames_System") then
-    CoreGui.ProjectGames_System:Destroy()
+-- ========== EMITTERS CODE (UNCHANGED) ==========
+-- Project Games | Brookhaven Emitter Master V12 (BEST VERSION)
+-- Full Max | Categorized | Multi-Select & Search | PC & Mobile Responsive | Bug-Free
+-- Geliştirildi: (1) Eski GUI doğru temizlenir, (2) multi metin hatası düzeltildi, (3) MAX_MULTI_SELECT eklendi, (4) M tuşu ile toggle, (5) kart hover tooltip.
+
+-- Eğer daha önce aynı GUI varsa güvenli biçimde sil (farklı isimleri de kontrol et)
+local existingGui = CoreGui:FindFirstChild("Mars Hub") or CoreGui:FindFirstChild("ProjectGames_System")
+if existingGui then
+    existingGui:Destroy()
 end
 
--- Remote (emitters) safe-get
+-- remote safe-get (beklemeden, pcall)
 local remote = nil
 pcall(function()
-    local remFolder = ReplicatedStorage:FindFirstChild("Remotes")
-    if remFolder then
-        remote = remFolder:FindFirstChild("ApplyEmmiter")
+    local rem = ReplicatedStorage:FindFirstChild("Remotes")
+    if rem then
+        remote = rem:FindFirstChild("ApplyEmmiter")
     end
 end)
 
--- ScreenGui root
-local rootGui = Instance.new("ScreenGui")
-rootGui.Name = "ProjectGames_System"
-rootGui.Parent = CoreGui
-rootGui.ResetOnSpawn = false
-rootGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
--- Smooth drag shared function
-local function makeSmoothDrag(obj)
-    local dragging = false
-    local dragInput, dragStart, startPos
-
-    obj.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = obj.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    obj.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            obj.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-end
-
--- Animated draggable launcher
-local openBtn = Instance.new("ImageButton")
-openBtn.Name = "AnimatedProjectButton"
-openBtn.Size = UDim2.new(0, 60, 0, 60)
-openBtn.Position = UDim2.new(0, 15, 0.5, -30)
-openBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-openBtn.Image = "http://www.roblox.com/asset/?id=125614278681229"
-openBtn.Parent = rootGui
-Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0, 12)
-local openStroke = Instance.new("UIStroke", openBtn)
-openStroke.Thickness = 2
-openStroke.Color = Color3.fromRGB(130, 0, 255)
-local gradient = Instance.new("UIGradient", openBtn)
-gradient.Rotation = 90
-openBtn.ZIndex = 5000
-makeSmoothDrag(openBtn)
-
-task.spawn(function()
-    local counter = 0
-    while task.wait(0.03) do
-        if not openBtn or not openBtn.Parent then break end
-        counter = counter + 0.01
-        local rainbowColor1 = Color3.fromHSV(math.abs(math.sin(counter)), 1, 1)
-        local purpleVibe = Color3.fromRGB(130, 0, 255)
-        gradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, rainbowColor1),
-            ColorSequenceKeypoint.new(1, purpleVibe)
-        })
-        openStroke.Color = purpleVibe:Lerp(rainbowColor1, 0.5)
-    end
-end)
-
--- Quick AI button (next to launcher) to ensure AI opens even when other UIs hidden
-local quickAiBtn = Instance.new("TextButton")
-quickAiBtn.Name = "QuickAIButton"
-quickAiBtn.Size = UDim2.new(0, 54, 0, 26)
-quickAiBtn.Position = UDim2.new(0, 80, 0.5, -13)
-quickAiBtn.AnchorPoint = Vector2.new(0, 0.5)
-quickAiBtn.BackgroundColor3 = Color3.fromRGB(20,20,25)
-quickAiBtn.TextColor3 = Color3.fromRGB(255,255,255)
-quickAiBtn.Text = "AI"
-quickAiBtn.Font = Enum.Font.GothamBold
-quickAiBtn.TextSize = 14
-quickAiBtn.Parent = rootGui
-Instance.new("UICorner", quickAiBtn).CornerRadius = UDim.new(0,6)
-local quickAiStroke = Instance.new("UIStroke", quickAiBtn)
-quickAiStroke.Color = Color3.fromRGB(40,40,45)
-quickAiBtn.ZIndex = 5001
-makeSmoothDrag(quickAiBtn)
-
--- ===========================
--- EMITTERS UI (full)
--- ===========================
+-- Özel Logo ID'leri
 local PREMIUM_ICON = "rbxassetid://6010710098"
 local VIP_ICON = "rbxassetid://18248037214"
 
+-- [1]=ID, [2]=Arg, [3]=Name, [4]=IconID, [5]=isVIP, [6]=isRP
 local emitterData = {
     {"00000002", "0002FreeWhite", "Free White", "18635845425", false, false},
     {"00000003", "0003FreeYellow", "Free Yellow", "18635841291", false, false},
@@ -201,55 +118,150 @@ local emitterData = {
     {"00000072", "096StarRed", "Star Red", "18637949457", true, false},
 }
 
--- Emitter GUI root
-local emitterMain = Instance.new("Frame")
-emitterMain.Size = UDim2.new(0.85, 0, 0.75, 0)
-emitterMain.AnchorPoint = Vector2.new(0.5, 0.5)
-emitterMain.Position = UDim2.new(0.5, 0, 1.5, 0) -- off-screen initially
-emitterMain.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
-emitterMain.BorderSizePixel = 0
-emitterMain.ClipsDescendants = true
-emitterMain.Parent = rootGui
-Instance.new("UICorner", emitterMain).CornerRadius = UDim.new(0, 15)
-local mainStroke = Instance.new("UIStroke", emitterMain)
+-- UI Setup
+local mainGui = Instance.new("ScreenGui")
+mainGui.Name = "Mars Hub"
+mainGui.Parent = CoreGui
+mainGui.ResetOnSpawn = false
+mainGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Basit tooltip (kart hover için)
+local tooltip = Instance.new("TextLabel")
+tooltip.Name = "EmitterTooltip"
+tooltip.Size = UDim2.new(0, 200, 0, 24)
+tooltip.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+tooltip.TextColor3 = Color3.fromRGB(240, 240, 240)
+tooltip.TextSize = 14
+tooltip.Font = Enum.Font.Gotham
+tooltip.Visible = false
+tooltip.BackgroundTransparency = 0.05
+tooltip.AnchorPoint = Vector2.new(0, 0)
+tooltip.Parent = mainGui
+Instance.new("UICorner", tooltip).CornerRadius = UDim.new(0, 6)
+
+-- Gelişmiş & Pürüzsüz Drag Fonksiyonu
+local function makeSmoothDrag(obj)
+    local dragging = false
+    local dragInput, dragStart, startPos
+
+    obj.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = obj.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    obj.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            obj.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+-- Sürüklenebilir Logo
+local openBtn = Instance.new("ImageButton")
+openBtn.Name = "AnimatedProjectButton"
+openBtn.Size = UDim2.new(0, 60, 0, 60)
+openBtn.Position = UDim2.new(0, 15, 0.5, -30)
+openBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+openBtn.Image = "http://www.roblox.com/asset/?id=125614278681229"
+openBtn.Parent = mainGui
+
+Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0, 12)
+
+local openStroke = Instance.new("UIStroke", openBtn)
+openStroke.Thickness = 2
+openStroke.Color = Color3.fromRGB(130, 0, 255)
+
+local gradient = Instance.new("UIGradient")
+gradient.Rotation = 90
+gradient.Parent = openBtn
+
+-- Memory Leak Korumalı Animasyon Döngüsü
+task.spawn(function()
+    local counter = 0
+    while task.wait(0.03) do
+        if not openBtn or not openBtn.Parent then break end 
+        counter = counter + 0.01
+        local rainbowColor1 = Color3.fromHSV(math.abs(math.sin(counter)), 1, 1)
+        local purpleVibe = Color3.fromRGB(130, 0, 255)
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, rainbowColor1),
+            ColorSequenceKeypoint.new(1, purpleVibe)
+        })
+        openStroke.Color = purpleVibe:Lerp(rainbowColor1, 0.5)
+    end
+end)
+
+makeSmoothDrag(openBtn)
+
+-- Ana Panel (Responsive Yatay Tasarım)
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0.85, 0, 0.75, 0)
+main.AnchorPoint = Vector2.new(0.5, 0.5)
+main.Position = UDim2.new(0.5, 0, 1.5, 0)
+main.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+main.BorderSizePixel = 0
+main.ClipsDescendants = true
+main.Parent = mainGui
+
+local sizeConst = Instance.new("UISizeConstraint", main)
+sizeConst.MaxSize = Vector2.new(850, 500)
+sizeConst.MinSize = Vector2.new(480, 280)
+
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 15)
+local mainStroke = Instance.new("UIStroke", main)
 mainStroke.Thickness = 2
-local emitterGrad = Instance.new("UIGradient", mainStroke)
-emitterGrad.Color = ColorSequence.new(Color3.fromRGB(255,85,0), Color3.fromRGB(50,10,0))
-local emitterSizeConst = Instance.new("UISizeConstraint", emitterMain)
-emitterSizeConst.MaxSize = Vector2.new(900, 560)
-emitterSizeConst.MinSize = Vector2.new(480, 280)
-emitterMain.ZIndex = 50
-makeSmoothDrag(emitterMain)
+local grad = Instance.new("UIGradient", mainStroke)
+grad.Color = ColorSequence.new(Color3.fromRGB(255, 85, 0), Color3.fromRGB(50, 10, 0))
 
--- Emitter top
-local emitterTop = Instance.new("Frame")
-emitterTop.Size = UDim2.new(1, 0, 0, 55)
-emitterTop.BackgroundTransparency = 1
-emitterTop.Parent = emitterMain
+makeSmoothDrag(main)
 
-local emitterTitle = Instance.new("TextLabel")
-emitterTitle.Size = UDim2.new(0.4, 0, 1, 0)
-emitterTitle.Position = UDim2.new(0, 20, 0, 0)
-emitterTitle.Text = "⭐ Mars Hub Emitters ⭐"
-emitterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-emitterTitle.Font = Enum.Font.GothamBold
-emitterTitle.TextSize = 17
-emitterTitle.TextXAlignment = Enum.TextXAlignment.Left
-emitterTitle.BackgroundTransparency = 1
-emitterTitle.Parent = emitterTop
+-- Başlık & Araç Çubuğu
+local top = Instance.new("Frame")
+top.Size = UDim2.new(1, 0, 0, 55)
+top.BackgroundTransparency = 1
+top.Parent = main
 
-local emitterClose = Instance.new("TextButton")
-emitterClose.Size = UDim2.new(0, 35, 0, 35)
-emitterClose.AnchorPoint = Vector2.new(1, 0.5)
-emitterClose.Position = UDim2.new(1, -15, 0.5, 0)
-emitterClose.Text = "×"
-emitterClose.TextColor3 = Color3.fromRGB(255, 60, 60)
-emitterClose.Font = Enum.Font.GothamBold
-emitterClose.TextSize = 30
-emitterClose.BackgroundTransparency = 1
-emitterClose.Parent = emitterTop
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0.4, 0, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.Text = "⭐ Mars Hub Emmiters ⭐"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 17
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.BackgroundTransparency = 1
+title.Parent = top
 
--- Search bar
+local close = Instance.new("TextButton")
+close.Size = UDim2.new(0, 35, 0, 35)
+close.AnchorPoint = Vector2.new(1, 0.5)
+close.Position = UDim2.new(1, -15, 0.5, 0)
+close.Text = "×"
+close.TextColor3 = Color3.fromRGB(255, 60, 60)
+close.Font = Enum.Font.GothamBold
+close.TextSize = 30
+close.BackgroundTransparency = 1
+close.Parent = top
+
 local searchBar = Instance.new("TextBox")
 searchBar.Size = UDim2.new(0, 130, 0, 30)
 searchBar.AnchorPoint = Vector2.new(1, 0.5)
@@ -257,68 +269,65 @@ searchBar.Position = UDim2.new(1, -60, 0.5, 0)
 searchBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 searchBar.TextColor3 = Color3.fromRGB(255, 255, 255)
 searchBar.PlaceholderText = "Search..."
-searchBar.ClearTextOnFocus = false
 searchBar.Font = Enum.Font.Gotham
 searchBar.TextSize = 12
-searchBar.Parent = emitterTop
+searchBar.ClearTextOnFocus = false
+searchBar.Parent = top
 Instance.new("UICorner", searchBar).CornerRadius = UDim.new(0, 6)
 local searchStroke = Instance.new("UIStroke", searchBar)
 searchStroke.Color = Color3.fromRGB(40, 40, 45)
 
--- AI button (in emitter header) - connects to AI toggle
-local aiBtn = Instance.new("TextButton")
-aiBtn.Size = UDim2.new(0, 80, 0, 30)
-aiBtn.AnchorPoint = Vector2.new(1, 0.5)
-aiBtn.Position = UDim2.new(1, -200, 0.5, 0)
-aiBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-aiBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-aiBtn.Text = "AI"
-aiBtn.Font = Enum.Font.GothamBold
-aiBtn.TextSize = 12
-aiBtn.Parent = emitterTop
-Instance.new("UICorner", aiBtn).CornerRadius = UDim.new(0, 6)
-local aiStroke = Instance.new("UIStroke", aiBtn)
-aiStroke.Color = Color3.fromRGB(40, 40, 45)
-aiBtn.ZIndex = 51
-
--- Multi-select toggle
 local multiBtn = Instance.new("TextButton")
 multiBtn.Size = UDim2.new(0, 80, 0, 30)
 multiBtn.AnchorPoint = Vector2.new(1, 0.5)
-multiBtn.Position = UDim2.new(1, -260, 0.5, 0)
+multiBtn.Position = UDim2.new(1, -200, 0.5, 0)
 multiBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 multiBtn.TextColor3 = Color3.fromRGB(255, 85, 85)
-multiBtn.Text = "Multi: Off"
+multiBtn.Text = "Offline" -- başlangıç durumu
 multiBtn.Font = Enum.Font.GothamBold
 multiBtn.TextSize = 12
-multiBtn.Parent = emitterTop
+multiBtn.Parent = top
 Instance.new("UICorner", multiBtn).CornerRadius = UDim.new(0, 6)
 local multiStroke = Instance.new("UIStroke", multiBtn)
 multiStroke.Color = Color3.fromRGB(40, 40, 45)
-multiBtn.ZIndex = 51
 
--- Scroll area for emitters
+-- AI header button (NEW) - won't break emitter layout; placed left of multiBtn
+local aiHeaderBtn = Instance.new("TextButton")
+aiHeaderBtn.Size = UDim2.new(0, 80, 0, 30)
+aiHeaderBtn.AnchorPoint = Vector2.new(1, 0.5)
+aiHeaderBtn.Position = UDim2.new(1, -140, 0.5, 0) -- between multiBtn and search
+aiHeaderBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+aiHeaderBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+aiHeaderBtn.Text = "AI"
+aiHeaderBtn.Font = Enum.Font.GothamBold
+aiHeaderBtn.TextSize = 12
+aiHeaderBtn.Parent = top
+Instance.new("UICorner", aiHeaderBtn).CornerRadius = UDim.new(0, 6)
+local aiHeaderStroke = Instance.new("UIStroke", aiHeaderBtn)
+aiHeaderStroke.Color = Color3.fromRGB(40, 40, 45)
+aiHeaderBtn.ZIndex = 51
+
+-- Scroll Alanı
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1, -15, 1, -70)
 scroll.Position = UDim2.new(0, 10, 0, 60)
 scroll.BackgroundTransparency = 1
-scroll.ScrollBarThickness = 6
+scroll.ScrollBarThickness = 2
 scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 85, 0)
-scroll.Parent = emitterMain
-scroll.ZIndex = 50
+scroll.Parent = main
 
 local listLayout = Instance.new("UIListLayout", scroll)
 listLayout.Padding = UDim.new(0, 20)
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- createCategory helper
+-- Kategori Oluşturucu
 local function createCategory(name, order)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -10, 0, 40)
     frame.BackgroundTransparency = 1
     frame.LayoutOrder = order
     frame.Parent = scroll
-
+    
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, 0, 0, 30)
     lbl.Text = "  " .. name:upper()
@@ -329,58 +338,64 @@ local function createCategory(name, order)
     lbl.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     lbl.Parent = frame
     Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 6)
-
+    
     local container = Instance.new("Frame")
     container.Name = "Container"
     container.Size = UDim2.new(1, 0, 0, 0)
     container.Position = UDim2.new(0, 0, 0, 40)
     container.BackgroundTransparency = 1
     container.Parent = frame
-
+    
     local grid = Instance.new("UIGridLayout", container)
     grid.CellSize = UDim2.new(0, 130, 0, 145)
     grid.CellPadding = UDim2.new(0, 10, 0, 10)
     grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
+    
     grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         container.Size = UDim2.new(1, 0, 0, grid.AbsoluteContentSize.Y)
         frame.Size = UDim2.new(1, -10, 0, grid.AbsoluteContentSize.Y + 50)
     end)
-
+    
     return container
 end
 
 local freeCont = createCategory("Free Emitters", 1)
 local premiumCont = createCategory("Emitters (VIP & Premium)", 2)
 
+-- Veritabanı
 local cardTable = {}
 local activeCards = {}
 local multiEnabled = false
+local MAX_MULTI_SELECT = 4 -- istenirse buradan değiştirilebilir
 
+-- Güvenli Emitter Uygulama (Asenkron ve Çökme Korumalı)
 local function applyEmitterSafe(id, arg)
     task.spawn(function()
         pcall(function()
-            if remote and remote.Parent and remote.InvokeServer then
-                remote:InvokeServer(id, arg)
-            elseif remote and remote.Parent and remote.FireServer then
-                -- fallback if remote is RemoteEvent instead
-                remote:FireServer(id, arg)
+            if remote and remote.Parent then
+                if remote.InvokeServer then
+                    remote:InvokeServer(id, arg)
+                else
+                    -- if it's an event
+                    pcall(function() remote:FireServer(id, arg) end)
+                end
             end
         end)
     end)
 end
 
--- multi toggle logic
+-- Multi-Select Toggle
 multiBtn.MouseButton1Click:Connect(function()
     multiEnabled = not multiEnabled
     if multiEnabled then
-        multiBtn.Text = "Multi: On"
+        multiBtn.Text = "Multi"
         multiBtn.TextColor3 = Color3.fromRGB(85, 255, 85)
         multiStroke.Color = Color3.fromRGB(85, 255, 85)
     else
-        multiBtn.Text = "Multi: Off"
+        multiBtn.Text = "Offline"
         multiBtn.TextColor3 = Color3.fromRGB(255, 85, 85)
         multiStroke.Color = Color3.fromRGB(40, 40, 45)
+        
         for c, _ in pairs(activeCards) do
             if c and c.Parent and c:FindFirstChild("UIStroke") then
                 c.UIStroke.Color = Color3.fromRGB(40, 40, 45)
@@ -390,14 +405,14 @@ multiBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- create emitter cards
+-- Kartları Oluştur
 for _, d in ipairs(emitterData) do
     local card = Instance.new("TextButton")
     card.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
     card.Text = ""
     card.Parent = (d[5] or d[6]) and premiumCont or freeCont
     Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
-
+    
     local stroke = Instance.new("UIStroke", card)
     stroke.Color = Color3.fromRGB(40, 40, 45)
 
@@ -436,6 +451,17 @@ for _, d in ipairs(emitterData) do
         rLogo.Parent = card
     end
 
+    -- Tooltip gösterimi
+    card.MouseEnter:Connect(function()
+        tooltip.Text = d[3]
+        local mousePos = UserInputService:GetMouseLocation()
+        tooltip.Position = UDim2.new(0, mousePos.X + 10, 0, mousePos.Y + 10)
+        tooltip.Visible = true
+    end)
+    card.MouseLeave:Connect(function()
+        tooltip.Visible = false
+    end)
+
     card.MouseButton1Click:Connect(function()
         if multiEnabled then
             if activeCards[card] then
@@ -444,7 +470,7 @@ for _, d in ipairs(emitterData) do
             else
                 local count = 0
                 for _ in pairs(activeCards) do count = count + 1 end
-                if count < 4 then
+                if count < MAX_MULTI_SELECT then
                     activeCards[card] = true
                     stroke.Color = Color3.fromRGB(255, 85, 0)
                     applyEmitterSafe(d[1], d[2])
@@ -457,7 +483,7 @@ for _, d in ipairs(emitterData) do
                 end
             end
             table.clear(activeCards)
-
+            
             activeCards[card] = true
             stroke.Color = Color3.fromRGB(255, 85, 0)
             applyEmitterSafe(d[1], d[2])
@@ -465,9 +491,9 @@ for _, d in ipairs(emitterData) do
     end)
 end
 
--- search logic
+-- Arama Çubuğu (Geliştirilmiş)
 searchBar:GetPropertyChangedSignal("Text"):Connect(function()
-    local text = string.lower(searchBar.Text or "")
+    local text = (searchBar.Text or ""):lower()
     for cardObj, name in pairs(cardTable) do
         if text == "" or string.find(name, text, 1, true) then
             cardObj.Visible = true
@@ -478,343 +504,224 @@ searchBar:GetPropertyChangedSignal("Text"):Connect(function()
     scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 40)
 end)
 
+-- Tween & Toggle
+local open = false
+local function toggleUI()
+    open = not open
+    main:TweenPosition(open and UDim2.new(0.5, 0, 0.5, 0) or UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
+end
+
+openBtn.MouseButton1Click:Connect(toggleUI)
+close.MouseButton1Click:Connect(toggleUI)
+
+-- Klavye kısayolu: M ile toggle (oyun işlenmiş input'larını bozmaz)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.M then
+        toggleUI()
+    end
+end)
+
+-- Scroll Canvas Dinamik Güncelleme
 listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 40)
 end)
 
--- emitter open/close
-local emitterOpen = false
-local function toggleEmitterUI()
-    emitterOpen = not emitterOpen
-    if emitterOpen then
-        emitterMain:TweenPosition(UDim2.new(0.5, 0, 0.5, 0), "Out", "Back", 0.45, true)
-    else
-        emitterMain:TweenPosition(UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.45, true)
-    end
-end
+-- ========== AI CHAT CODE (APPENDED & INTEGRATED) ==========
+-- Minimal but robust AI chat UI appended below. Uses mainGui as parent and does not alter emitter structures.
 
-openBtn.MouseButton1Click:Connect(toggleEmitterUI)
-emitterClose.MouseButton1Click:Connect(toggleEmitterUI)
-
--- ===========================
--- AI CHAT UI
--- ===========================
-local defaultSettings = {
-    apiProvider = "openai", -- default preference if both keys present
+-- Settings (in-memory) and DataStore best-effort
+local defaultAISettings = {
+    apiProvider = "openai", -- preferred when single key or both available
     geminiModel = "flash",
     openaiModel = "gpt-4o-mini",
     geminiKey = "",
     openaiKey = "",
-    uiBgColor = Color3.fromRGB(10, 10, 12),
-    uiAccentColor = Color3.fromRGB(255, 85, 0),
-    iconColor = Color3.fromRGB(130, 0, 255),
+    uiBgColor = Color3.fromRGB(10,10,12),
+    uiAccentColor = Color3.fromRGB(255,85,0),
     aiSize = "max",
 }
+local AISettings = {}
+for k,v in pairs(defaultAISettings) do AISettings[k] = v end
 
-local settings = {
-    apiProvider = defaultSettings.apiProvider,
-    geminiModel = defaultSettings.geminiModel,
-    openaiModel = defaultSettings.openaiModel,
-    geminiKey = defaultSettings.geminiKey,
-    openaiKey = defaultSettings.openaiKey,
-    uiBgColor = defaultSettings.uiBgColor,
-    uiAccentColor = defaultSettings.uiAccentColor,
-    iconColor = defaultSettings.iconColor,
-    aiSize = defaultSettings.aiSize,
-}
-
--- load from DataStore (best-effort)
-local dataStore = nil
-pcall(function() dataStore = DataStoreService:GetDataStore("MarsHubAISettings_V1") end)
-if dataStore and Players.LocalPlayer then
-    local ok, loaded = pcall(function() return dataStore:GetAsync(tostring(Players.LocalPlayer.UserId)) end)
-    if ok and type(loaded) == "table" then
-        for k,v in pairs(loaded) do settings[k] = v end
-    end
-end
-
-local function saveSettings()
-    if dataStore and Players.LocalPlayer then
-        pcall(function() dataStore:SetAsync(tostring(Players.LocalPlayer.UserId), settings) end)
-    end
-end
-
--- auto-detect provider based on keys (if only one key present)
-local function autoSelectProvider()
-    if trim(settings.openaiKey) ~= "" and trim(settings.geminiKey) == "" then
-        settings.apiProvider = "openai"
-    elseif trim(settings.geminiKey) ~= "" and trim(settings.openaiKey) == "" then
-        settings.apiProvider = "gemini"
-    end
-end
-autoSelectProvider()
-
--- try to detect keys from ReplicatedStorage: MarsHubAIKeys/GeminiKey & OpenAIKey (StringValues)
-local function detectKeysFromReplicatedStorage()
-    local ok, folder = pcall(function() return ReplicatedStorage:FindFirstChild("MarsHubAIKeys") end)
-    if ok and folder and folder:IsA("Folder") then
-        local g = folder:FindFirstChild("GeminiKey")
-        local o = folder:FindFirstChild("OpenAIKey")
-        if g and g:IsA("StringValue") and trim(g.Value) ~= "" then
-            settings.geminiKey = trim(g.Value)
+-- Try load DataStore (client-side pcall, may not work in LocalScript in real Roblox)
+pcall(function()
+    local ds = DataStoreService:GetDataStore("MarsHubAISettings_V1")
+    if ds and Players.LocalPlayer then
+        local ok, data = pcall(function() return ds:GetAsync(tostring(Players.LocalPlayer.UserId)) end)
+        if ok and type(data) == "table" then
+            for k,v in pairs(data) do AISettings[k] = v end
         end
-        if o and o:IsA("StringValue") and trim(o.Value) ~= "" then
-            settings.openaiKey = trim(o.Value)
-        end
-        autoSelectProvider()
-        saveSettings()
-    end
-end
-
--- periodically check ReplicatedStorage for keys (useful for executor injection)
-task.spawn(function()
-    while true do
-        pcall(detectKeysFromReplicatedStorage)
-        task.wait(8)
     end
 end)
 
--- AI main panel (max by default)
-local aiMain = Instance.new("Frame")
-aiMain.Name = "AIMain"
-aiMain.Size = UDim2.new(0.97, 0, 0.92, 0)
-aiMain.AnchorPoint = Vector2.new(0.5, 0.5)
-aiMain.Position = UDim2.new(0.5, 0, 1.5, 0)
-aiMain.BackgroundColor3 = settings.uiBgColor
-aiMain.BorderSizePixel = 0
-aiMain.ClipsDescendants = true
-aiMain.Parent = rootGui
-aiMain.Visible = false
-Instance.new("UICorner", aiMain).CornerRadius = UDim.new(0, 8)
-local aiSizeConst = Instance.new("UISizeConstraint", aiMain)
-aiSizeConst.MaxSize = Vector2.new(1400, 1000)
-aiSizeConst.MinSize = Vector2.new(700, 400)
-local aiMainStroke = Instance.new("UIStroke", aiMain)
-aiMainStroke.Thickness = 2
-aiMainStroke.Color = settings.uiAccentColor
-aiMain.ZIndex = 1000
-makeSmoothDrag(aiMain)
+local function saveAISettings()
+    pcall(function()
+        local ds = DataStoreService:GetDataStore("MarsHubAISettings_V1")
+        if ds and Players.LocalPlayer then
+            pcall(function() ds:SetAsync(tostring(Players.LocalPlayer.UserId), AISettings) end)
+        end
+    end)
+end
 
-local function setAISize(mode)
-    mode = mode or "max"
-    settings.aiSize = mode
-    if mode == "small" then
-        aiMain.Size = UDim2.new(0.6, 0, 0.5, 0)
-        aiSizeConst.MaxSize = Vector2.new(700,420)
-        aiSizeConst.MinSize = Vector2.new(380,200)
-    elseif mode == "normal" then
-        aiMain.Size = UDim2.new(0.8, 0, 0.7, 0)
-        aiSizeConst.MaxSize = Vector2.new(1000,700)
-        aiSizeConst.MinSize = Vector2.new(420,220)
-    else
-        aiMain.Size = UDim2.new(0.97, 0, 0.92, 0)
-        aiSizeConst.MaxSize = Vector2.new(1400,1000)
-        aiSizeConst.MinSize = Vector2.new(700,400)
+-- Auto-select provider if only one key exists
+local function aiAutoProvider()
+    if trim(AISettings.openaiKey) ~= "" and trim(AISettings.geminiKey) == "" then
+        AISettings.apiProvider = "openai"
+    elseif trim(AISettings.geminiKey) ~= "" and trim(AISettings.openaiKey) == "" then
+        AISettings.apiProvider = "gemini"
     end
 end
-setAISize(settings.aiSize)
+aiAutoProvider()
 
--- AI top bar & buttons
-local aiTop = Instance.new("Frame")
-aiTop.Size = UDim2.new(1,0,0,60)
-aiTop.Position = UDim2.new(0,0,0,0)
-aiTop.BackgroundColor3 = Color3.fromRGB(20,20,24)
-aiTop.BorderSizePixel = 0
-aiTop.Parent = aiMain
-aiTop.ZIndex = 1001
+-- Detect keys from ReplicatedStorage folder "MarsHubAIKeys" (StringValues: "GeminiKey" and "OpenAIKey")
+local function detectKeysFromReplicatedStorage()
+    pcall(function()
+        local folder = ReplicatedStorage:FindFirstChild("MarsHubAIKeys")
+        if folder and folder:IsA("Folder") then
+            local g = folder:FindFirstChild("GeminiKey")
+            local o = folder:FindFirstChild("OpenAIKey")
+            if g and g:IsA("StringValue") and trim(g.Value) ~= "" then AISettings.geminiKey = trim(g.Value) end
+            if o and o:IsA("StringValue") and trim(o.Value) ~= "" then AISettings.openaiKey = trim(o.Value) end
+            aiAutoProvider()
+            saveAISettings()
+        end
+    end)
+end
 
-local aiTitle = Instance.new("TextLabel")
-aiTitle.Size = UDim2.new(0.6,0,1,0)
-aiTitle.Position = UDim2.new(0,20,0,0)
-aiTitle.Text = "🤖 Mars Hub AI Chat"
-aiTitle.TextColor3 = Color3.fromRGB(255,255,255)
-aiTitle.Font = Enum.Font.GothamBold
-aiTitle.TextSize = 18
-aiTitle.BackgroundTransparency = 1
-aiTitle.Parent = aiTop
-aiTitle.ZIndex = 1002
+-- Periodic detection (useful when testing with exploits that inject keys)
+task.spawn(function()
+    while true do
+        detectKeysFromReplicatedStorage()
+        task.wait(10)
+    end
+end)
 
-local aiSettingsBtn = Instance.new("TextButton")
-aiSettingsBtn.Size = UDim2.new(0,40,0,36)
-aiSettingsBtn.Position = UDim2.new(1,-130,0.5,-18)
-aiSettingsBtn.Text = "⚙️"
-aiSettingsBtn.Font = Enum.Font.GothamBold
-aiSettingsBtn.TextSize = 18
-aiSettingsBtn.BackgroundColor3 = Color3.fromRGB(30,30,34)
-aiSettingsBtn.Parent = aiTop
-Instance.new("UICorner", aiSettingsBtn).CornerRadius = UDim.new(0,6)
-aiSettingsBtn.ZIndex = 1002
+-- Quick AI button (next to launcher) - ensure accessible when emitter closed
+local quickAiBtn = Instance.new("TextButton")
+quickAiBtn.Name = "QuickAI"
+quickAiBtn.Size = UDim2.new(0, 54, 0, 26)
+quickAiBtn.Position = UDim2.new(0, 80, 0.5, -13)
+quickAiBtn.AnchorPoint = Vector2.new(0,0.5)
+quickAiBtn.BackgroundColor3 = Color3.fromRGB(20,20,25)
+quickAiBtn.TextColor3 = Color3.fromRGB(255,255,255)
+quickAiBtn.Text = "AI"
+quickAiBtn.Font = Enum.Font.GothamBold
+quickAiBtn.TextSize = 14
+quickAiBtn.Parent = mainGui
+Instance.new("UICorner", quickAiBtn).CornerRadius = UDim.new(0,6)
+local quickAiStroke = Instance.new("UIStroke", quickAiBtn); quickAiStroke.Color = Color3.fromRGB(40,40,45)
+makeSmoothDrag(quickAiBtn)
 
-local aiSizeBtn = Instance.new("TextButton")
-aiSizeBtn.Size = UDim2.new(0,60,0,36)
-aiSizeBtn.Position = UDim2.new(1,-190,0.5,-18)
-aiSizeBtn.Text = "Size"
-aiSizeBtn.Font = Enum.Font.GothamBold
-aiSizeBtn.TextSize = 14
-aiSizeBtn.BackgroundColor3 = Color3.fromRGB(30,30,34)
-aiSizeBtn.Parent = aiTop
-Instance.new("UICorner", aiSizeBtn).CornerRadius = UDim.new(0,6)
-aiSizeBtn.ZIndex = 1002
+-- AI main panel
+local aiMain = Instance.new("Frame")
+aiMain.Name = "MarsHub_AI_Main"
+aiMain.Size = UDim2.new(0.97, 0, 0.92, 0) -- default max
+aiMain.AnchorPoint = Vector2.new(0.5,0.5)
+aiMain.Position = UDim2.new(0.5, 0, 1.5, 0)
+aiMain.BackgroundColor3 = AISettings.uiBgColor
+aiMain.Parent = mainGui
+aiMain.Visible = false
+Instance.new("UICorner", aiMain).CornerRadius = UDim.new(0,8)
+makeSmoothDrag(aiMain)
 
-local aiClose = Instance.new("TextButton")
-aiClose.Size = UDim2.new(0,40,0,36)
-aiClose.Position = UDim2.new(1,-70,0.5,-18)
-aiClose.Text = "×"
-aiClose.Font = Enum.Font.GothamBold
-aiClose.TextSize = 22
-aiClose.BackgroundTransparency = 1
-aiClose.Parent = aiTop
-aiClose.ZIndex = 1002
+local aiTop = Instance.new("Frame"); aiTop.Size = UDim2.new(1,0,0,60); aiTop.Position = UDim2.new(0,0,0,0); aiTop.BackgroundColor3 = Color3.fromRGB(20,20,24); aiTop.Parent = aiMain
+local aiTitle = Instance.new("TextLabel"); aiTitle.Size = UDim2.new(0.6,0,1,0); aiTitle.Position = UDim2.new(0,20,0,0); aiTitle.Text = "🤖 Mars Hub AI Chat"; aiTitle.TextColor3 = Color3.fromRGB(255,255,255); aiTitle.Font = Enum.Font.GothamBold; aiTitle.TextSize = 18; aiTitle.BackgroundTransparency = 1; aiTitle.Parent = aiTop
 
--- chat display
-local chatScroll = Instance.new("ScrollingFrame")
-chatScroll.Size = UDim2.new(1,-40,1,-140)
-chatScroll.Position = UDim2.new(0,20,0,70)
-chatScroll.BackgroundTransparency = 1
-chatScroll.BorderSizePixel = 0
-chatScroll.ScrollBarThickness = 6
-chatScroll.Parent = aiMain
-chatScroll.ZIndex = 1001
+local aiSettingsBtn = Instance.new("TextButton"); aiSettingsBtn.Size = UDim2.new(0,40,0,36); aiSettingsBtn.Position = UDim2.new(1,-130,0.5,-18); aiSettingsBtn.Text = "⚙️"; aiSettingsBtn.Parent = aiTop; Instance.new("UICorner", aiSettingsBtn).CornerRadius = UDim.new(0,6)
+local aiSizeBtn = Instance.new("TextButton"); aiSizeBtn.Size = UDim2.new(0,60,0,36); aiSizeBtn.Position = UDim2.new(1,-190,0.5,-18); aiSizeBtn.Text = "Size"; aiSizeBtn.Parent = aiTop; Instance.new("UICorner", aiSizeBtn).CornerRadius = UDim.new(0,6)
+local aiCloseBtn = Instance.new("TextButton"); aiCloseBtn.Size = UDim2.new(0,40,0,36); aiCloseBtn.Position = UDim2.new(1,-70,0.5,-18); aiCloseBtn.Text = "×"; aiCloseBtn.BackgroundTransparency = 1; aiCloseBtn.Parent = aiTop
 
-local chatLayout = Instance.new("UIListLayout", chatScroll)
-chatLayout.Padding = UDim.new(0,10)
-chatLayout.SortOrder = Enum.SortOrder.LayoutOrder
+local chatScroll = Instance.new("ScrollingFrame"); chatScroll.Size = UDim2.new(1,-40,1,-140); chatScroll.Position = UDim2.new(0,20,0,70); chatScroll.BackgroundTransparency = 1; chatScroll.Parent = aiMain
+local chatLayout = Instance.new("UIListLayout", chatScroll); chatLayout.Padding = UDim.new(0,10); chatLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-local function displayMessage(text, isUser)
-    local msgContainer = Instance.new("Frame")
-    msgContainer.Size = UDim2.new(1,0,0,0)
-    msgContainer.BackgroundTransparency = 1
-    msgContainer.Parent = chatScroll
-    msgContainer.ZIndex = 1001
-
-    local bubble = Instance.new("TextLabel")
+local function displayMessageBubble(text, isUser)
+    local container = Instance.new("Frame"); container.BackgroundTransparency = 1; container.Size = UDim2.new(1,0,0,0); container.Parent = chatScroll
+    local bubble = Instance.new("TextLabel"); bubble.Parent = container
     bubble.Size = UDim2.new(0.85,0,0,0)
     bubble.Position = isUser and UDim2.new(0.15,0,0,0) or UDim2.new(0,0,0,0)
-    bubble.BackgroundColor3 = isUser and settings.uiAccentColor or Color3.fromRGB(35,35,40)
+    bubble.BackgroundColor3 = isUser and AISettings.uiAccentColor or Color3.fromRGB(35,35,40)
     bubble.TextColor3 = isUser and Color3.fromRGB(0,0,0) or Color3.fromRGB(255,255,255)
     bubble.TextWrapped = true
     bubble.Font = Enum.Font.Gotham
     bubble.TextSize = 14
     bubble.Text = text or ""
-    bubble.Parent = msgContainer
-    bubble.ZIndex = 1001
-
     Instance.new("UICorner", bubble).CornerRadius = UDim.new(0,8)
     Instance.new("UIPadding", bubble).Padding = UDim.new(0,12,0,12)
-
+    -- resize utility
     local function resize()
         local w = math.max(240, math.floor(aiMain.AbsoluteSize.X * 0.85) - 24)
-        local ts = TextService:GetTextSize(bubble.Text, bubble.TextSize, bubble.Font, Vector2.new(w, 2000))
+        local ts = TextService:GetTextSize(bubble.Text, bubble.TextSize, bubble.Font, Vector2.new(w,2000))
         bubble.Size = UDim2.new(0.85,0,0, math.max(ts.Y + 24, 30))
-        msgContainer.Size = UDim2.new(1,0,0,bubble.Size.Y.Offset + 6)
+        container.Size = UDim2.new(1,0,0,bubble.Size.Y.Offset + 6)
     end
-
-    task.spawn(function() task.wait() pcall(resize) end)
-    return bubble, msgContainer, resize
+    task.spawn(function() task.wait(); pcall(resize) end)
+    return bubble, container, resize
 end
 
--- unified request function with timeout and automatic provider selection if only one key present
-local function requestAI(userMessage, timeoutSeconds, callback)
-    timeoutSeconds = timeoutSeconds or 25
+-- unified request function (OpenAI / Gemini) with 25s timeout
+local function requestAI(message, timeout, cb)
+    timeout = timeout or 25
     local done = false
-    local function finish(ok, text)
-        if done then return end
-        done = true
-        pcall(function() callback(ok, text) end)
-    end
+    local function finish(ok, res) if done then return end done = true pcall(function() cb(ok, res) end) end
 
     -- choose provider automatically if only one key present
-    autoSelectProvider()
+    if trim(AISettings.openaiKey) ~= "" and trim(AISettings.geminiKey) == "" then AISettings.apiProvider = "openai" end
+    if trim(AISettings.geminiKey) ~= "" and trim(AISettings.openaiKey) == "" then AISettings.apiProvider = "gemini" end
 
     task.spawn(function()
-        if settings.apiProvider == "gemini" then
-            if trim(settings.geminiKey) == "" then finish(false, "❌ Gemini API key not set.") return end
-            local model = settings.geminiModel == "flash" and "gemini-2.0-flash-exp" or "gemini-1.5-lite"
-            local url = "https://generativelanguage.googleapis.com/v1beta/models/"..model..":generateContent?key="..settings.geminiKey
+        if AISettings.apiProvider == "gemini" then
+            if trim(AISettings.geminiKey) == "" then finish(false, "❌ Gemini key not set"); return end
+            local model = AISettings.geminiModel == "flash" and "gemini-2.0-flash-exp" or "gemini-1.5-lite"
+            local url = "https://generativelanguage.googleapis.com/v1beta/models/"..model..":generateContent?key="..AISettings.geminiKey
             local ok, resp = pcall(function()
-                local payload = { contents = { { parts = { { text = userMessage } } } } }
+                local payload = { contents = { { parts = { { text = message } } } } }
                 return HttpService:PostAsync(url, HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
             end)
-            if not ok or not resp then finish(false, "❌ Gemini request failed.") return end
+            if not ok or not resp then finish(false, "❌ Gemini request failed"); return end
             local ok2, data = pcall(function() return HttpService:JSONDecode(resp) end)
-            if not ok2 or not data then finish(false, "❌ Gemini invalid response.") return end
+            if not ok2 or not data then finish(false, "❌ Gemini invalid response"); return end
             if data and data.candidates and data.candidates[1] and data.candidates[1].content and data.candidates[1].content.parts and data.candidates[1].content.parts[1] then
                 finish(true, data.candidates[1].content.parts[1].text)
-            else finish(false, "❌ Gemini returned nothing.") end
-        else -- openai
-            if trim(settings.openaiKey) == "" then finish(false, "❌ OpenAI API key not set.") return end
+            else finish(false, "❌ Gemini returned nothing") end
+        else
+            if trim(AISettings.openaiKey) == "" then finish(false, "❌ OpenAI key not set"); return end
             local url = "https://api.openai.com/v1/chat/completions"
             local ok, respBody = pcall(function()
-                local payload = { model = settings.openaiModel, messages = { { role = "user", content = userMessage } }, max_tokens = 2000 }
+                local payload = { model = AISettings.openaiModel, messages = { { role = "user", content = message } }, max_tokens = 2000 }
                 if HttpService.RequestAsync then
-                    local r = HttpService:RequestAsync({ Url = url, Method = "POST", Headers = { ["Content-Type"]="application/json", ["Authorization"]="Bearer "..settings.openaiKey }, Body = HttpService:JSONEncode(payload) })
+                    local r = HttpService:RequestAsync({ Url = url, Method = "POST", Headers = { ["Content-Type"]="application/json", ["Authorization"]="Bearer "..AISettings.openaiKey }, Body = HttpService:JSONEncode(payload) })
                     return r and r.Body or nil
                 else
                     return HttpService:PostAsync(url, HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
                 end
             end)
-            if not ok or not respBody then finish(false, "❌ OpenAI request failed.") return end
+            if not ok or not respBody then finish(false, "❌ OpenAI request failed"); return end
             local ok2, data = pcall(function() return HttpService:JSONDecode(respBody) end)
-            if not ok2 or not data then finish(false, "❌ OpenAI invalid response.") return end
+            if not ok2 or not data then finish(false, "❌ OpenAI invalid response"); return end
             if data and data.choices and data.choices[1] and data.choices[1].message and data.choices[1].message.content then
                 finish(true, data.choices[1].message.content)
-            else finish(false, "❌ OpenAI returned nothing.") end
+            else finish(false, "❌ OpenAI returned nothing") end
         end
     end)
 
-    task.delay(timeoutSeconds, function()
-        if not done then
-            done = true
-            pcall(function() callback(false, "❌ Request timed out after "..tostring(timeoutSeconds).."s.") end)
-        end
+    task.delay(timeout, function()
+        if not done then done = true pcall(function() cb(false, "❌ Request timed out after "..tostring(timeout).."s.") end) end
     end)
 end
 
 -- AI input area
-local aiInputFrame = Instance.new("Frame")
-aiInputFrame.Size = UDim2.new(1,0,0,70)
-aiInputFrame.Position = UDim2.new(0,0,1,-70)
-aiInputFrame.BackgroundColor3 = Color3.fromRGB(18,18,20)
-aiInputFrame.Parent = aiMain
-aiInputFrame.ZIndex = 1001
-
-local inputBox = Instance.new("TextBox")
-inputBox.Size = UDim2.new(1, -120, 0, 48)
-inputBox.Position = UDim2.new(0,16,0,11)
-inputBox.BackgroundColor3 = Color3.fromRGB(28,28,30)
-inputBox.TextColor3 = Color3.fromRGB(255,255,255)
-inputBox.PlaceholderText = "Ask me anything..."
-inputBox.Font = Enum.Font.Gotham
-inputBox.TextSize = 16
-inputBox.Parent = aiInputFrame
-Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0,6)
-inputBox.ZIndex = 1002
-
-local sendBtn = Instance.new("TextButton")
-sendBtn.Size = UDim2.new(0,80,0,48)
-sendBtn.Position = UDim2.new(1,-96,0,11)
-sendBtn.Text = "Send"
-sendBtn.Font = Enum.Font.GothamBold
-sendBtn.TextSize = 16
-sendBtn.BackgroundColor3 = settings.uiAccentColor
-sendBtn.Parent = aiInputFrame
-Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(0,6)
-sendBtn.ZIndex = 1002
+local aiInputFrame = Instance.new("Frame"); aiInputFrame.Size = UDim2.new(1,0,0,70); aiInputFrame.Position = UDim2.new(0,0,1,-70); aiInputFrame.BackgroundColor3 = Color3.fromRGB(18,18,20); aiInputFrame.Parent = aiMain
+local inputBox = Instance.new("TextBox"); inputBox.Size = UDim2.new(1, -120, 0, 48); inputBox.Position = UDim2.new(0,16,0,11); inputBox.BackgroundColor3 = Color3.fromRGB(28,28,30); inputBox.TextColor3 = Color3.fromRGB(255,255,255); inputBox.PlaceholderText = "Ask me anything..."; inputBox.Font = Enum.Font.Gotham; inputBox.TextSize = 16; inputBox.Parent = aiInputFrame; Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0,6)
+local sendBtn = Instance.new("TextButton"); sendBtn.Size = UDim2.new(0,80,0,48); sendBtn.Position = UDim2.new(1,-96,0,11); sendBtn.Text = "Send"; sendBtn.Font = Enum.Font.GothamBold; sendBtn.TextSize = 16; sendBtn.BackgroundColor3 = AISettings.uiAccentColor; sendBtn.Parent = aiInputFrame; Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(0,6)
 
 local function sendMessage()
     local msg = trim(inputBox.Text)
     if msg == "" then return end
-
-    displayMessage(msg, true)
-
-    local typingBubble, typingContainer, resizeFn = displayMessage("⏳ Thinking...", false)
-
+    displayMessageBubble(msg, true)
+    local typingBubble, typingContainer, resizeFn = displayMessageBubble("⏳ Thinking...", false)
     inputBox.Text = ""
-    inputBox.Active = false
-    sendBtn.Active = false
-    sendBtn.AutoButtonColor = false
-    sendBtn.BackgroundTransparency = 0.5
-
+    inputBox.Active = false; sendBtn.Active = false; sendBtn.AutoButtonColor = false; sendBtn.BackgroundTransparency = 0.5
     local anim = true
     task.spawn(function()
         local dots = 0
@@ -825,7 +732,6 @@ local function sendMessage()
             task.wait(0.5)
         end
     end)
-
     requestAI(msg, 25, function(success, text)
         anim = false
         if typingBubble and typingBubble.Parent then
@@ -834,129 +740,59 @@ local function sendMessage()
             typingBubble.BackgroundColor3 = Color3.fromRGB(35,35,40)
             if resizeFn then pcall(resizeFn) end
         else
-            displayMessage(text or "❌ Error", false)
+            displayMessageBubble(text or "❌ Error", false)
         end
-
-        inputBox.Active = true
-        sendBtn.Active = true
-        sendBtn.AutoButtonColor = true
-        sendBtn.BackgroundTransparency = 0
+        inputBox.Active = true; sendBtn.Active = true; sendBtn.AutoButtonColor = true; sendBtn.BackgroundTransparency = 0
     end)
 end
 
 sendBtn.MouseButton1Click:Connect(sendMessage)
 inputBox.FocusLost:Connect(function(enterPressed) if enterPressed then sendMessage() end end)
 
--- SETTINGS PANEL (minimal, keys + size + save)
-local settingsPanel = Instance.new("Frame")
-settingsPanel.Name = "AISettingsPanel"
-settingsPanel.Size = UDim2.new(0.86,0,0.86,0)
-settingsPanel.AnchorPoint = Vector2.new(0.5,0.5)
-settingsPanel.Position = UDim2.new(0.5,0,0.5,0)
-settingsPanel.BackgroundColor3 = settings.uiBgColor
-settingsPanel.BorderSizePixel = 0
-settingsPanel.Visible = false
-settingsPanel.Parent = rootGui
-settingsPanel.ZIndex = 1200
-Instance.new("UICorner", settingsPanel).CornerRadius = UDim.new(0,8)
-makeSmoothDrag(settingsPanel)
-
+-- SETTINGS panel (minimal)
+local settingsPanel = Instance.new("Frame"); settingsPanel.Name = "AISettings"; settingsPanel.Size = UDim2.new(0.86,0,0.86,0); settingsPanel.AnchorPoint = Vector2.new(0.5,0.5); settingsPanel.Position = UDim2.new(0.5,0,0.5,0); settingsPanel.BackgroundColor3 = AISettings.uiBgColor; settingsPanel.Parent = mainGui; settingsPanel.Visible = false; Instance.new("UICorner", settingsPanel).CornerRadius = UDim.new(0,8); makeSmoothDrag(settingsPanel)
 local settingsInner = Instance.new("Frame"); settingsInner.Size = UDim2.new(1,-40,1,-80); settingsInner.Position = UDim2.new(0,20,0,60); settingsInner.BackgroundTransparency = 1; settingsInner.Parent = settingsPanel
-local function createLabel(t, parent, y) local l=Instance.new("TextLabel"); l.Size=UDim2.new(1,0,0,24); l.Position=UDim2.new(0,0,y); l.Text=t; l.BackgroundTransparency=1; l.TextColor3=Color3.fromRGB(220,220,220); l.Font=Enum.Font.GothamBold; l.TextSize=14; l.Parent=parent; return l end
-
-createLabel("Gemini API Key:", settingsInner, 0)
-local gemInput = Instance.new("TextBox"); gemInput.Size=UDim2.new(1,0,0,34); gemInput.Position=UDim2.new(0,0,0,24); gemInput.BackgroundColor3=Color3.fromRGB(28,28,30); gemInput.Text = settings.geminiKey or ""; gemInput.TextColor3=Color3.fromRGB(255,255,255); gemInput.Parent = settingsInner
-Instance.new("UICorner", gemInput).CornerRadius = UDim.new(0,6)
-
-createLabel("OpenAI API Key:", settingsInner, 64)
-local openInput = Instance.new("TextBox"); openInput.Size=UDim2.new(1,0,0,34); openInput.Position=UDim2.new(0,0,0,88); openInput.BackgroundColor3=Color3.fromRGB(28,28,30); openInput.Text = settings.openaiKey or ""; openInput.TextColor3=Color3.fromRGB(255,255,255); openInput.Parent = settingsInner
-Instance.new("UICorner", openInput).CornerRadius = UDim.new(0,6)
-
-createLabel("AI Panel Size:", settingsInner, 140)
-local sizeDropdown = Instance.new("TextButton"); sizeDropdown.Size=UDim2.new(0,160,0,34); sizeDropdown.Position = UDim2.new(0,0,0,164); sizeDropdown.Text = settings.aiSize or "max"; sizeDropdown.Font = Enum.Font.Gotham; sizeDropdown.Parent = settingsInner
-Instance.new("UICorner", sizeDropdown).CornerRadius = UDim.new(0,6)
-
-local sizeOptionsFrame = Instance.new("Frame"); sizeOptionsFrame.Size=UDim2.new(0,160,0,0); sizeOptionsFrame.Position = UDim2.new(0,0,0,200); sizeOptionsFrame.BackgroundTransparency = 1; sizeOptionsFrame.Parent = settingsInner
-local function makeSizeOption(name, y)
-    local b = Instance.new("TextButton"); b.Size=UDim2.new(1,0,0,28); b.Position = UDim2.new(0,0,0,y); b.Text = name; b.Font=Enum.Font.Gotham; b.BackgroundColor3 = Color3.fromRGB(35,35,40); b.Parent = sizeOptionsFrame
-    b.MouseButton1Click:Connect(function()
-        setAISize(name)
-        sizeDropdown.Text = name
-        sizeOptionsFrame.Size = UDim2.new(0,160,0,0)
-    end)
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
-end
-makeSizeOption("small", 0); makeSizeOption("normal", 30); makeSizeOption("max", 60)
-sizeDropdown.MouseButton1Click:Connect(function()
-    if sizeOptionsFrame.Size.Y.Offset == 0 then
-        sizeOptionsFrame.Size = UDim2.new(0,160,0,90)
-    else
-        sizeOptionsFrame.Size = UDim2.new(0,160,0,0)
-    end
-end)
-
-local saveKeysBtn = Instance.new("TextButton"); saveKeysBtn.Size=UDim2.new(0,160,0,34); saveKeysBtn.Position=UDim2.new(0,0,1,-44); saveKeysBtn.Text="Save"; saveKeysBtn.Font=Enum.Font.GothamBold; saveKeysBtn.Parent = settingsInner
-Instance.new("UICorner", saveKeysBtn).CornerRadius = UDim.new(0,6)
+local function createLabel(text, parent, posY) local l = Instance.new("TextLabel"); l.Size = UDim2.new(1,0,0,24); l.Position = UDim2.new(0,0,posY,0); l.Text = text; l.BackgroundTransparency = 1; l.TextColor3 = Color3.fromRGB(220,220,220); l.Font = Enum.Font.GothamBold; l.TextSize = 14; l.Parent = parent; return l end
+createLabel("Gemini Key:", settingsInner, 0); local gemInput = Instance.new("TextBox"); gemInput.Size = UDim2.new(1,0,0,34); gemInput.Position = UDim2.new(0,0,0,24); gemInput.BackgroundColor3 = Color3.fromRGB(28,28,30); gemInput.Text = AISettings.geminiKey or ""; gemInput.Parent = settingsInner; Instance.new("UICorner", gemInput).CornerRadius = UDim.new(0,6)
+createLabel("OpenAI Key:", settingsInner, 64); local openInput = Instance.new("TextBox"); openInput.Size = UDim2.new(1,0,0,34); openInput.Position = UDim2.new(0,0,0,88); openInput.BackgroundColor3 = Color3.fromRGB(28,28,30); openInput.Text = AISettings.openaiKey or ""; openInput.Parent = settingsInner; Instance.new("UICorner", openInput).CornerRadius = UDim.new(0,6)
+local saveKeysBtn = Instance.new("TextButton"); saveKeysBtn.Size = UDim2.new(0,140,0,34); saveKeysBtn.Position = UDim2.new(0,0,1,-44); saveKeysBtn.Text = "Save"; saveKeysBtn.Parent = settingsInner; Instance.new("UICorner", saveKeysBtn).CornerRadius = UDim.new(0,6)
 saveKeysBtn.MouseButton1Click:Connect(function()
-    settings.geminiKey = trim(gemInput.Text)
-    settings.openaiKey = trim(openInput.Text)
-    autoSelectProvider()
-    saveSettings()
-    displayMessage("✅ Settings updated. Provider: "..tostring(settings.apiProvider), false)
+    AISettings.geminiKey = trim(gemInput.Text)
+    AISettings.openaiKey = trim(openInput.Text)
+    aiAutoProvider()
+    saveAISettings()
+    displayMessageBubble("✅ API keys saved. Provider: "..tostring(AISettings.apiProvider), false)
 end)
-
-local settingsCloseBtn = Instance.new("TextButton"); settingsCloseBtn.Size=UDim2.new(0,36,0,36); settingsCloseBtn.Position=UDim2.new(1,-12,0,12); settingsCloseBtn.Text="×"; settingsCloseBtn.BackgroundTransparency=1; settingsCloseBtn.Parent = settingsPanel
+local settingsCloseBtn = Instance.new("TextButton"); settingsCloseBtn.Size = UDim2.new(0,36,0,36); settingsCloseBtn.Position = UDim2.new(1,-12,0,12); settingsCloseBtn.Text = "×"; settingsCloseBtn.BackgroundTransparency = 1; settingsCloseBtn.Parent = settingsPanel
 settingsCloseBtn.MouseButton1Click:Connect(function() settingsPanel.Visible = false end)
 
--- connect quick and header AI buttons to toggle
+-- Toggle AI UI (connected to header btn and quick btn)
 local aiOpen = false
-local function toggleAIUI()
+local function toggleAI()
     aiOpen = not aiOpen
     if aiOpen then
         detectKeysFromReplicatedStorage()
-        aiMain.ZIndex = 1000
-        aiTop.ZIndex = 1001
-        chatScroll.ZIndex = 1001
-        aiInputFrame.ZIndex = 1001
-        settingsPanel.ZIndex = 1200
         aiMain.Visible = true
         aiMain:TweenPosition(UDim2.new(0.5,0,0.5,0), "Out", "Back", 0.35, true)
     else
         aiMain:TweenPosition(UDim2.new(0.5,0,1.5,0), "Out", "Back", 0.35, true)
-        task.delay(0.36, function()
-            if aiMain and aiMain.Parent then aiMain.Visible = false end
-        end)
+        task.delay(0.36, function() if aiMain and aiMain.Parent then aiMain.Visible = false end end)
     end
 end
 
-quickAiBtn.MouseButton1Click:Connect(toggleAIUI)
-aiBtn.MouseButton1Click:Connect(toggleAIUI)
+quickAiBtn.MouseButton1Click:Connect(toggleAI)
+aiHeaderBtn.MouseButton1Click:Connect(toggleAI)
 aiSettingsBtn.MouseButton1Click:Connect(function() settingsPanel.Visible = not settingsPanel.Visible end)
-aiClose.MouseButton1Click:Connect(toggleAIUI)
+aiCloseBtn.MouseButton1Click:Connect(toggleAI)
 aiSizeBtn.MouseButton1Click:Connect(function()
-    local cur = settings.aiSize or "max"
-    if cur == "small" then setAISize("normal")
-    elseif cur == "normal" then setAISize("max")
-    else setAISize("small") end
-    saveSettings()
+    local cur = AISettings.aiSize or "max"
+    if cur == "small" then AISettings.aiSize = "normal"; setAISize("normal")
+    elseif cur == "normal" then AISettings.aiSize = "max"; setAISize("max")
+    else AISettings.aiSize = "small"; setAISize("small") end
+    saveAISettings()
 end)
 
--- also ensure emitter open button toggles emitter
-openBtn.MouseButton1Click:Connect(toggleEmitterUI)
-
--- ensure auto-sizing of scrollers
-chatLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    chatScroll.CanvasSize = UDim2.new(0,0,0,chatLayout.AbsoluteContentSize.Y + 20)
-    chatScroll.CanvasPosition = Vector2.new(0, chatLayout.AbsoluteContentSize.Y)
-end)
-listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scroll.CanvasSize = UDim2.new(0,0,0,listLayout.AbsoluteContentSize.Y + 40)
-end)
-
--- initial messages
-displayMessage("👋 Welcome to Mars Hub AI Chat! Open Settings to set API keys or place them in ReplicatedStorage/MarsHubAIKeys (StringValues).", false)
-
--- finalize initial canvases
+-- Keep scrolls sized initially
 task.defer(function()
     pcall(function()
         scroll.CanvasSize = UDim2.new(0,0,0,listLayout.AbsoluteContentSize.Y + 40)
@@ -964,4 +800,4 @@ task.defer(function()
     end)
 end)
 
--- End of main.lua
+-- End of merged main.lua
