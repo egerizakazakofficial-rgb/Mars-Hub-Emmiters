@@ -1,5 +1,6 @@
 -- Project Games | Brookhaven Emitter Master V12 (BEST VERSION)
 -- Full Max | Categorized | Multi-Select & Search | PC & Mobile Responsive | Bug-Free
+-- Geliştirildi: (1) Eski GUI doğru temizlenir, (2) multi metin hatası düzeltildi, (3) MAX_MULTI_SELECT eklendi, (4) M tuşu ile toggle, (5) kart hover tooltip.
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -8,9 +9,10 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
--- Temizlik (Eski UI varsa sil ve memory leak'leri önle)
-if CoreGui:FindFirstChild("ProjectGames_System") then 
-    CoreGui.ProjectGames_System:Destroy() 
+-- Eğer daha önce aynı GUI varsa güvenli biçimde sil (farklı isimleri de kontrol et)
+local existingGui = CoreGui:FindFirstChild("Mars Hub") or CoreGui:FindFirstChild("ProjectGames_System")
+if existingGui then
+    existingGui:Destroy()
 end
 
 local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ApplyEmmiter")
@@ -100,6 +102,20 @@ mainGui.Name = "Mars Hub"
 mainGui.Parent = CoreGui
 mainGui.ResetOnSpawn = false
 mainGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Basit tooltip (kart hover için)
+local tooltip = Instance.new("TextLabel")
+tooltip.Name = "EmitterTooltip"
+tooltip.Size = UDim2.new(0, 200, 0, 24)
+tooltip.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+tooltip.TextColor3 = Color3.fromRGB(240, 240, 240)
+tooltip.TextSize = 14
+tooltip.Font = Enum.Font.Gotham
+tooltip.Visible = false
+tooltip.BackgroundTransparency = 0.05
+tooltip.AnchorPoint = Vector2.new(0, 0)
+tooltip.Parent = mainGui
+Instance.new("UICorner", tooltip).CornerRadius = UDim.new(0, 6)
 
 -- Gelişmiş & Pürüzsüz Drag Fonksiyonu
 local function makeSmoothDrag(obj)
@@ -245,7 +261,7 @@ multiBtn.AnchorPoint = Vector2.new(1, 0.5)
 multiBtn.Position = UDim2.new(1, -200, 0.5, 0)
 multiBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 multiBtn.TextColor3 = Color3.fromRGB(255, 85, 85)
-multiBtn.Text = "Offline"
+multiBtn.Text = "Offline" -- başlangıç durumu
 multiBtn.Font = Enum.Font.GothamBold
 multiBtn.TextSize = 12
 multiBtn.Parent = top
@@ -312,15 +328,18 @@ local premiumCont = createCategory("Emitters (VIP & Premium)", 2)
 local cardTable = {}
 local activeCards = {}
 local multiEnabled = false
+local MAX_MULTI_SELECT = 4 -- istenirse buradan değiştirilebilir
 
 -- Güvenli Emitter Uygulama (Asenkron ve Çökme Korumalı)
 local function applyEmitterSafe(id, arg)
     task.spawn(function()
-        pcall(function()
+        local ok, err = pcall(function()
             if remote and remote.Parent then
+                -- remote:InvokeServer şeklinde doğrudan çağrı pcall içinde
                 remote:InvokeServer(id, arg)
             end
         end)
+        -- hata varsa istersen buraya log ekleyebilirsin (şimdilik sessiz)
     end)
 end
 
@@ -328,11 +347,11 @@ end
 multiBtn.MouseButton1Click:Connect(function()
     multiEnabled = not multiEnabled
     if multiEnabled then
-        multiBtn.Text = "Patched"
+        multiBtn.Text = "Multi"
         multiBtn.TextColor3 = Color3.fromRGB(85, 255, 85)
         multiStroke.Color = Color3.fromRGB(85, 255, 85)
     else
-        multiBtn.Text = "Patched"
+        multiBtn.Text = "Offline"
         multiBtn.TextColor3 = Color3.fromRGB(255, 85, 85)
         multiStroke.Color = Color3.fromRGB(40, 40, 45)
         
@@ -391,6 +410,18 @@ for _, d in ipairs(emitterData) do
         rLogo.Parent = card
     end
 
+    -- Tooltip gösterimi
+    card.MouseEnter:Connect(function()
+        tooltip.Text = d[3]
+        local mousePos = UserInputService:GetMouseLocation()
+        -- küçük offset ile mouse'un sağ-altında göster
+        tooltip.Position = UDim2.new(0, mousePos.X + 10, 0, mousePos.Y + 10)
+        tooltip.Visible = true
+    end)
+    card.MouseLeave:Connect(function()
+        tooltip.Visible = false
+    end)
+
     card.MouseButton1Click:Connect(function()
         if multiEnabled then
             if activeCards[card] then
@@ -399,7 +430,7 @@ for _, d in ipairs(emitterData) do
             else
                 local count = 0
                 for _ in pairs(activeCards) do count = count + 1 end
-                if count < 4 then
+                if count < MAX_MULTI_SELECT then
                     activeCards[card] = true
                     stroke.Color = Color3.fromRGB(255, 85, 0)
                     applyEmitterSafe(d[1], d[2])
@@ -443,6 +474,14 @@ end
 
 openBtn.MouseButton1Click:Connect(toggleUI)
 close.MouseButton1Click:Connect(toggleUI)
+
+-- Klavye kısayolu: M ile toggle (oyun işlenmiş input'larını bozmaz)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.M then
+        toggleUI()
+    end
+end)
 
 -- Scroll Canvas Dinamik Güncelleme
 listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
