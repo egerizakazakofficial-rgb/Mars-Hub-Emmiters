@@ -1,9 +1,7 @@
--- Merged: Project Games Emitters V12 + Mars Hub AI Chat
--- Keep emitter code intact; AI UI appended and integrated (Quick AI + Header AI button).
--- AI auto-selects provider if only one key present (OpenAI preferred), typing indicator, 25s timeout.
--- Place this as your main.lua
+-- Project Games | Brookhaven Emitter Master V12 (BEST VERSION)
+-- Full Max | Categorized | Multi-Select & Search | PC & Mobile Responsive | Bug-Free
+-- Geliştirildi: (1) Eski GUI doğru temizlenir, (2) multi metin hatası düzeltildi, (3) MAX_MULTI_SELECT eklendi, (4) M tuşu ile toggle, (5) kart hover tooltip.
 
--- ========== SERVICES ==========
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -11,33 +9,13 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
--- Additional services used by AI
-local HttpService = game:GetService("HttpService")
-local DataStoreService = game:GetService("DataStoreService")
-local TextService = game:GetService("TextService")
-
--- ========== SAFE TRIM ==========
-local function trim(s) if not s then return "" end return s:match("^%s*(.-)%s*$") or "" end
-
--- ========== EMITTERS CODE (UNCHANGED) ==========
--- Project Games | Brookhaven Emitter Master V12 (BEST VERSION)
--- Full Max | Categorized | Multi-Select & Search | PC & Mobile Responsive | Bug-Free
--- Geliştirildi: (1) Eski GUI doğru temizlenir, (2) multi metin hatası düzeltildi, (3) MAX_MULTI_SELECT eklendi, (4) M tuşu ile toggle, (5) kart hover tooltip.
-
 -- Eğer daha önce aynı GUI varsa güvenli biçimde sil (farklı isimleri de kontrol et)
 local existingGui = CoreGui:FindFirstChild("Mars Hub") or CoreGui:FindFirstChild("ProjectGames_System")
 if existingGui then
     existingGui:Destroy()
 end
 
--- remote safe-get (beklemeden, pcall)
-local remote = nil
-pcall(function()
-    local rem = ReplicatedStorage:FindFirstChild("Remotes")
-    if rem then
-        remote = rem:FindFirstChild("ApplyEmmiter")
-    end
-end)
+local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ApplyEmmiter")
 
 -- Özel Logo ID'leri
 local PREMIUM_ICON = "rbxassetid://6010710098"
@@ -291,22 +269,6 @@ Instance.new("UICorner", multiBtn).CornerRadius = UDim.new(0, 6)
 local multiStroke = Instance.new("UIStroke", multiBtn)
 multiStroke.Color = Color3.fromRGB(40, 40, 45)
 
--- AI header button (NEW) - won't break emitter layout; placed left of multiBtn
-local aiHeaderBtn = Instance.new("TextButton")
-aiHeaderBtn.Size = UDim2.new(0, 80, 0, 30)
-aiHeaderBtn.AnchorPoint = Vector2.new(1, 0.5)
-aiHeaderBtn.Position = UDim2.new(1, -140, 0.5, 0) -- between multiBtn and search
-aiHeaderBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-aiHeaderBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-aiHeaderBtn.Text = "AI"
-aiHeaderBtn.Font = Enum.Font.GothamBold
-aiHeaderBtn.TextSize = 12
-aiHeaderBtn.Parent = top
-Instance.new("UICorner", aiHeaderBtn).CornerRadius = UDim.new(0, 6)
-local aiHeaderStroke = Instance.new("UIStroke", aiHeaderBtn)
-aiHeaderStroke.Color = Color3.fromRGB(40, 40, 45)
-aiHeaderBtn.ZIndex = 51
-
 -- Scroll Alanı
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1, -15, 1, -70)
@@ -371,16 +333,13 @@ local MAX_MULTI_SELECT = 4 -- istenirse buradan değiştirilebilir
 -- Güvenli Emitter Uygulama (Asenkron ve Çökme Korumalı)
 local function applyEmitterSafe(id, arg)
     task.spawn(function()
-        pcall(function()
+        local ok, err = pcall(function()
             if remote and remote.Parent then
-                if remote.InvokeServer then
-                    remote:InvokeServer(id, arg)
-                else
-                    -- if it's an event
-                    pcall(function() remote:FireServer(id, arg) end)
-                end
+                -- remote:InvokeServer şeklinde doğrudan çağrı pcall içinde
+                remote:InvokeServer(id, arg)
             end
         end)
+        -- hata varsa istersen buraya log ekleyebilirsin (şimdilik sessiz)
     end)
 end
 
@@ -455,6 +414,7 @@ for _, d in ipairs(emitterData) do
     card.MouseEnter:Connect(function()
         tooltip.Text = d[3]
         local mousePos = UserInputService:GetMouseLocation()
+        -- küçük offset ile mouse'un sağ-altında göster
         tooltip.Position = UDim2.new(0, mousePos.X + 10, 0, mousePos.Y + 10)
         tooltip.Visible = true
     end)
@@ -493,7 +453,7 @@ end
 
 -- Arama Çubuğu (Geliştirilmiş)
 searchBar:GetPropertyChangedSignal("Text"):Connect(function()
-    local text = (searchBar.Text or ""):lower()
+    local text = searchBar.Text:lower()
     for cardObj, name in pairs(cardTable) do
         if text == "" or string.find(name, text, 1, true) then
             cardObj.Visible = true
@@ -501,6 +461,7 @@ searchBar:GetPropertyChangedSignal("Text"):Connect(function()
             cardObj.Visible = false
         end
     end
+    -- Arama sonrası Scroll boyutunu tazelemek için tetikleyici
     scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 40)
 end)
 
@@ -526,278 +487,3 @@ end)
 listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 40)
 end)
-
--- ========== AI CHAT CODE (APPENDED & INTEGRATED) ==========
--- Minimal but robust AI chat UI appended below. Uses mainGui as parent and does not alter emitter structures.
-
--- Settings (in-memory) and DataStore best-effort
-local defaultAISettings = {
-    apiProvider = "openai", -- preferred when single key or both available
-    geminiModel = "flash",
-    openaiModel = "gpt-4o-mini",
-    geminiKey = "",
-    openaiKey = "",
-    uiBgColor = Color3.fromRGB(10,10,12),
-    uiAccentColor = Color3.fromRGB(255,85,0),
-    aiSize = "max",
-}
-local AISettings = {}
-for k,v in pairs(defaultAISettings) do AISettings[k] = v end
-
--- Try load DataStore (client-side pcall, may not work in LocalScript in real Roblox)
-pcall(function()
-    local ds = DataStoreService:GetDataStore("MarsHubAISettings_V1")
-    if ds and Players.LocalPlayer then
-        local ok, data = pcall(function() return ds:GetAsync(tostring(Players.LocalPlayer.UserId)) end)
-        if ok and type(data) == "table" then
-            for k,v in pairs(data) do AISettings[k] = v end
-        end
-    end
-end)
-
-local function saveAISettings()
-    pcall(function()
-        local ds = DataStoreService:GetDataStore("MarsHubAISettings_V1")
-        if ds and Players.LocalPlayer then
-            pcall(function() ds:SetAsync(tostring(Players.LocalPlayer.UserId), AISettings) end)
-        end
-    end)
-end
-
--- Auto-select provider if only one key exists
-local function aiAutoProvider()
-    if trim(AISettings.openaiKey) ~= "" and trim(AISettings.geminiKey) == "" then
-        AISettings.apiProvider = "openai"
-    elseif trim(AISettings.geminiKey) ~= "" and trim(AISettings.openaiKey) == "" then
-        AISettings.apiProvider = "gemini"
-    end
-end
-aiAutoProvider()
-
--- Detect keys from ReplicatedStorage folder "MarsHubAIKeys" (StringValues: "GeminiKey" and "OpenAIKey")
-local function detectKeysFromReplicatedStorage()
-    pcall(function()
-        local folder = ReplicatedStorage:FindFirstChild("MarsHubAIKeys")
-        if folder and folder:IsA("Folder") then
-            local g = folder:FindFirstChild("GeminiKey")
-            local o = folder:FindFirstChild("OpenAIKey")
-            if g and g:IsA("StringValue") and trim(g.Value) ~= "" then AISettings.geminiKey = trim(g.Value) end
-            if o and o:IsA("StringValue") and trim(o.Value) ~= "" then AISettings.openaiKey = trim(o.Value) end
-            aiAutoProvider()
-            saveAISettings()
-        end
-    end)
-end
-
--- Periodic detection (useful when testing with exploits that inject keys)
-task.spawn(function()
-    while true do
-        detectKeysFromReplicatedStorage()
-        task.wait(10)
-    end
-end)
-
--- Quick AI button (next to launcher) - ensure accessible when emitter closed
-local quickAiBtn = Instance.new("TextButton")
-quickAiBtn.Name = "QuickAI"
-quickAiBtn.Size = UDim2.new(0, 54, 0, 26)
-quickAiBtn.Position = UDim2.new(0, 80, 0.5, -13)
-quickAiBtn.AnchorPoint = Vector2.new(0,0.5)
-quickAiBtn.BackgroundColor3 = Color3.fromRGB(20,20,25)
-quickAiBtn.TextColor3 = Color3.fromRGB(255,255,255)
-quickAiBtn.Text = "AI"
-quickAiBtn.Font = Enum.Font.GothamBold
-quickAiBtn.TextSize = 14
-quickAiBtn.Parent = mainGui
-Instance.new("UICorner", quickAiBtn).CornerRadius = UDim.new(0,6)
-local quickAiStroke = Instance.new("UIStroke", quickAiBtn); quickAiStroke.Color = Color3.fromRGB(40,40,45)
-makeSmoothDrag(quickAiBtn)
-
--- AI main panel
-local aiMain = Instance.new("Frame")
-aiMain.Name = "MarsHub_AI_Main"
-aiMain.Size = UDim2.new(0.97, 0, 0.92, 0) -- default max
-aiMain.AnchorPoint = Vector2.new(0.5,0.5)
-aiMain.Position = UDim2.new(0.5, 0, 1.5, 0)
-aiMain.BackgroundColor3 = AISettings.uiBgColor
-aiMain.Parent = mainGui
-aiMain.Visible = false
-Instance.new("UICorner", aiMain).CornerRadius = UDim.new(0,8)
-makeSmoothDrag(aiMain)
-
-local aiTop = Instance.new("Frame"); aiTop.Size = UDim2.new(1,0,0,60); aiTop.Position = UDim2.new(0,0,0,0); aiTop.BackgroundColor3 = Color3.fromRGB(20,20,24); aiTop.Parent = aiMain
-local aiTitle = Instance.new("TextLabel"); aiTitle.Size = UDim2.new(0.6,0,1,0); aiTitle.Position = UDim2.new(0,20,0,0); aiTitle.Text = "🤖 Mars Hub AI Chat"; aiTitle.TextColor3 = Color3.fromRGB(255,255,255); aiTitle.Font = Enum.Font.GothamBold; aiTitle.TextSize = 18; aiTitle.BackgroundTransparency = 1; aiTitle.Parent = aiTop
-
-local aiSettingsBtn = Instance.new("TextButton"); aiSettingsBtn.Size = UDim2.new(0,40,0,36); aiSettingsBtn.Position = UDim2.new(1,-130,0.5,-18); aiSettingsBtn.Text = "⚙️"; aiSettingsBtn.Parent = aiTop; Instance.new("UICorner", aiSettingsBtn).CornerRadius = UDim.new(0,6)
-local aiSizeBtn = Instance.new("TextButton"); aiSizeBtn.Size = UDim2.new(0,60,0,36); aiSizeBtn.Position = UDim2.new(1,-190,0.5,-18); aiSizeBtn.Text = "Size"; aiSizeBtn.Parent = aiTop; Instance.new("UICorner", aiSizeBtn).CornerRadius = UDim.new(0,6)
-local aiCloseBtn = Instance.new("TextButton"); aiCloseBtn.Size = UDim2.new(0,40,0,36); aiCloseBtn.Position = UDim2.new(1,-70,0.5,-18); aiCloseBtn.Text = "×"; aiCloseBtn.BackgroundTransparency = 1; aiCloseBtn.Parent = aiTop
-
-local chatScroll = Instance.new("ScrollingFrame"); chatScroll.Size = UDim2.new(1,-40,1,-140); chatScroll.Position = UDim2.new(0,20,0,70); chatScroll.BackgroundTransparency = 1; chatScroll.Parent = aiMain
-local chatLayout = Instance.new("UIListLayout", chatScroll); chatLayout.Padding = UDim.new(0,10); chatLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-local function displayMessageBubble(text, isUser)
-    local container = Instance.new("Frame"); container.BackgroundTransparency = 1; container.Size = UDim2.new(1,0,0,0); container.Parent = chatScroll
-    local bubble = Instance.new("TextLabel"); bubble.Parent = container
-    bubble.Size = UDim2.new(0.85,0,0,0)
-    bubble.Position = isUser and UDim2.new(0.15,0,0,0) or UDim2.new(0,0,0,0)
-    bubble.BackgroundColor3 = isUser and AISettings.uiAccentColor or Color3.fromRGB(35,35,40)
-    bubble.TextColor3 = isUser and Color3.fromRGB(0,0,0) or Color3.fromRGB(255,255,255)
-    bubble.TextWrapped = true
-    bubble.Font = Enum.Font.Gotham
-    bubble.TextSize = 14
-    bubble.Text = text or ""
-    Instance.new("UICorner", bubble).CornerRadius = UDim.new(0,8)
-    Instance.new("UIPadding", bubble).Padding = UDim.new(0,12,0,12)
-    -- resize utility
-    local function resize()
-        local w = math.max(240, math.floor(aiMain.AbsoluteSize.X * 0.85) - 24)
-        local ts = TextService:GetTextSize(bubble.Text, bubble.TextSize, bubble.Font, Vector2.new(w,2000))
-        bubble.Size = UDim2.new(0.85,0,0, math.max(ts.Y + 24, 30))
-        container.Size = UDim2.new(1,0,0,bubble.Size.Y.Offset + 6)
-    end
-    task.spawn(function() task.wait(); pcall(resize) end)
-    return bubble, container, resize
-end
-
--- unified request function (OpenAI / Gemini) with 25s timeout
-local function requestAI(message, timeout, cb)
-    timeout = timeout or 25
-    local done = false
-    local function finish(ok, res) if done then return end done = true pcall(function() cb(ok, res) end) end
-
-    -- choose provider automatically if only one key present
-    if trim(AISettings.openaiKey) ~= "" and trim(AISettings.geminiKey) == "" then AISettings.apiProvider = "openai" end
-    if trim(AISettings.geminiKey) ~= "" and trim(AISettings.openaiKey) == "" then AISettings.apiProvider = "gemini" end
-
-    task.spawn(function()
-        if AISettings.apiProvider == "gemini" then
-            if trim(AISettings.geminiKey) == "" then finish(false, "❌ Gemini key not set"); return end
-            local model = AISettings.geminiModel == "flash" and "gemini-2.0-flash-exp" or "gemini-1.5-lite"
-            local url = "https://generativelanguage.googleapis.com/v1beta/models/"..model..":generateContent?key="..AISettings.geminiKey
-            local ok, resp = pcall(function()
-                local payload = { contents = { { parts = { { text = message } } } } }
-                return HttpService:PostAsync(url, HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
-            end)
-            if not ok or not resp then finish(false, "❌ Gemini request failed"); return end
-            local ok2, data = pcall(function() return HttpService:JSONDecode(resp) end)
-            if not ok2 or not data then finish(false, "❌ Gemini invalid response"); return end
-            if data and data.candidates and data.candidates[1] and data.candidates[1].content and data.candidates[1].content.parts and data.candidates[1].content.parts[1] then
-                finish(true, data.candidates[1].content.parts[1].text)
-            else finish(false, "❌ Gemini returned nothing") end
-        else
-            if trim(AISettings.openaiKey) == "" then finish(false, "❌ OpenAI key not set"); return end
-            local url = "https://api.openai.com/v1/chat/completions"
-            local ok, respBody = pcall(function()
-                local payload = { model = AISettings.openaiModel, messages = { { role = "user", content = message } }, max_tokens = 2000 }
-                if HttpService.RequestAsync then
-                    local r = HttpService:RequestAsync({ Url = url, Method = "POST", Headers = { ["Content-Type"]="application/json", ["Authorization"]="Bearer "..AISettings.openaiKey }, Body = HttpService:JSONEncode(payload) })
-                    return r and r.Body or nil
-                else
-                    return HttpService:PostAsync(url, HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
-                end
-            end)
-            if not ok or not respBody then finish(false, "❌ OpenAI request failed"); return end
-            local ok2, data = pcall(function() return HttpService:JSONDecode(respBody) end)
-            if not ok2 or not data then finish(false, "❌ OpenAI invalid response"); return end
-            if data and data.choices and data.choices[1] and data.choices[1].message and data.choices[1].message.content then
-                finish(true, data.choices[1].message.content)
-            else finish(false, "❌ OpenAI returned nothing") end
-        end
-    end)
-
-    task.delay(timeout, function()
-        if not done then done = true pcall(function() cb(false, "❌ Request timed out after "..tostring(timeout).."s.") end) end
-    end)
-end
-
--- AI input area
-local aiInputFrame = Instance.new("Frame"); aiInputFrame.Size = UDim2.new(1,0,0,70); aiInputFrame.Position = UDim2.new(0,0,1,-70); aiInputFrame.BackgroundColor3 = Color3.fromRGB(18,18,20); aiInputFrame.Parent = aiMain
-local inputBox = Instance.new("TextBox"); inputBox.Size = UDim2.new(1, -120, 0, 48); inputBox.Position = UDim2.new(0,16,0,11); inputBox.BackgroundColor3 = Color3.fromRGB(28,28,30); inputBox.TextColor3 = Color3.fromRGB(255,255,255); inputBox.PlaceholderText = "Ask me anything..."; inputBox.Font = Enum.Font.Gotham; inputBox.TextSize = 16; inputBox.Parent = aiInputFrame; Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0,6)
-local sendBtn = Instance.new("TextButton"); sendBtn.Size = UDim2.new(0,80,0,48); sendBtn.Position = UDim2.new(1,-96,0,11); sendBtn.Text = "Send"; sendBtn.Font = Enum.Font.GothamBold; sendBtn.TextSize = 16; sendBtn.BackgroundColor3 = AISettings.uiAccentColor; sendBtn.Parent = aiInputFrame; Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(0,6)
-
-local function sendMessage()
-    local msg = trim(inputBox.Text)
-    if msg == "" then return end
-    displayMessageBubble(msg, true)
-    local typingBubble, typingContainer, resizeFn = displayMessageBubble("⏳ Thinking...", false)
-    inputBox.Text = ""
-    inputBox.Active = false; sendBtn.Active = false; sendBtn.AutoButtonColor = false; sendBtn.BackgroundTransparency = 0.5
-    local anim = true
-    task.spawn(function()
-        local dots = 0
-        while anim and typingBubble and typingBubble.Parent do
-            dots = (dots % 3) + 1
-            typingBubble.Text = "⏳ Thinking" .. string.rep(".", dots)
-            if resizeFn then pcall(resizeFn) end
-            task.wait(0.5)
-        end
-    end)
-    requestAI(msg, 25, function(success, text)
-        anim = false
-        if typingBubble and typingBubble.Parent then
-            typingBubble.Text = text or (success and "" or "❌ Error")
-            typingBubble.TextColor3 = Color3.fromRGB(255,255,255)
-            typingBubble.BackgroundColor3 = Color3.fromRGB(35,35,40)
-            if resizeFn then pcall(resizeFn) end
-        else
-            displayMessageBubble(text or "❌ Error", false)
-        end
-        inputBox.Active = true; sendBtn.Active = true; sendBtn.AutoButtonColor = true; sendBtn.BackgroundTransparency = 0
-    end)
-end
-
-sendBtn.MouseButton1Click:Connect(sendMessage)
-inputBox.FocusLost:Connect(function(enterPressed) if enterPressed then sendMessage() end end)
-
--- SETTINGS panel (minimal)
-local settingsPanel = Instance.new("Frame"); settingsPanel.Name = "AISettings"; settingsPanel.Size = UDim2.new(0.86,0,0.86,0); settingsPanel.AnchorPoint = Vector2.new(0.5,0.5); settingsPanel.Position = UDim2.new(0.5,0,0.5,0); settingsPanel.BackgroundColor3 = AISettings.uiBgColor; settingsPanel.Parent = mainGui; settingsPanel.Visible = false; Instance.new("UICorner", settingsPanel).CornerRadius = UDim.new(0,8); makeSmoothDrag(settingsPanel)
-local settingsInner = Instance.new("Frame"); settingsInner.Size = UDim2.new(1,-40,1,-80); settingsInner.Position = UDim2.new(0,20,0,60); settingsInner.BackgroundTransparency = 1; settingsInner.Parent = settingsPanel
-local function createLabel(text, parent, posY) local l = Instance.new("TextLabel"); l.Size = UDim2.new(1,0,0,24); l.Position = UDim2.new(0,0,posY,0); l.Text = text; l.BackgroundTransparency = 1; l.TextColor3 = Color3.fromRGB(220,220,220); l.Font = Enum.Font.GothamBold; l.TextSize = 14; l.Parent = parent; return l end
-createLabel("Gemini Key:", settingsInner, 0); local gemInput = Instance.new("TextBox"); gemInput.Size = UDim2.new(1,0,0,34); gemInput.Position = UDim2.new(0,0,0,24); gemInput.BackgroundColor3 = Color3.fromRGB(28,28,30); gemInput.Text = AISettings.geminiKey or ""; gemInput.Parent = settingsInner; Instance.new("UICorner", gemInput).CornerRadius = UDim.new(0,6)
-createLabel("OpenAI Key:", settingsInner, 64); local openInput = Instance.new("TextBox"); openInput.Size = UDim2.new(1,0,0,34); openInput.Position = UDim2.new(0,0,0,88); openInput.BackgroundColor3 = Color3.fromRGB(28,28,30); openInput.Text = AISettings.openaiKey or ""; openInput.Parent = settingsInner; Instance.new("UICorner", openInput).CornerRadius = UDim.new(0,6)
-local saveKeysBtn = Instance.new("TextButton"); saveKeysBtn.Size = UDim2.new(0,140,0,34); saveKeysBtn.Position = UDim2.new(0,0,1,-44); saveKeysBtn.Text = "Save"; saveKeysBtn.Parent = settingsInner; Instance.new("UICorner", saveKeysBtn).CornerRadius = UDim.new(0,6)
-saveKeysBtn.MouseButton1Click:Connect(function()
-    AISettings.geminiKey = trim(gemInput.Text)
-    AISettings.openaiKey = trim(openInput.Text)
-    aiAutoProvider()
-    saveAISettings()
-    displayMessageBubble("✅ API keys saved. Provider: "..tostring(AISettings.apiProvider), false)
-end)
-local settingsCloseBtn = Instance.new("TextButton"); settingsCloseBtn.Size = UDim2.new(0,36,0,36); settingsCloseBtn.Position = UDim2.new(1,-12,0,12); settingsCloseBtn.Text = "×"; settingsCloseBtn.BackgroundTransparency = 1; settingsCloseBtn.Parent = settingsPanel
-settingsCloseBtn.MouseButton1Click:Connect(function() settingsPanel.Visible = false end)
-
--- Toggle AI UI (connected to header btn and quick btn)
-local aiOpen = false
-local function toggleAI()
-    aiOpen = not aiOpen
-    if aiOpen then
-        detectKeysFromReplicatedStorage()
-        aiMain.Visible = true
-        aiMain:TweenPosition(UDim2.new(0.5,0,0.5,0), "Out", "Back", 0.35, true)
-    else
-        aiMain:TweenPosition(UDim2.new(0.5,0,1.5,0), "Out", "Back", 0.35, true)
-        task.delay(0.36, function() if aiMain and aiMain.Parent then aiMain.Visible = false end end)
-    end
-end
-
-quickAiBtn.MouseButton1Click:Connect(toggleAI)
-aiHeaderBtn.MouseButton1Click:Connect(toggleAI)
-aiSettingsBtn.MouseButton1Click:Connect(function() settingsPanel.Visible = not settingsPanel.Visible end)
-aiCloseBtn.MouseButton1Click:Connect(toggleAI)
-aiSizeBtn.MouseButton1Click:Connect(function()
-    local cur = AISettings.aiSize or "max"
-    if cur == "small" then AISettings.aiSize = "normal"; setAISize("normal")
-    elseif cur == "normal" then AISettings.aiSize = "max"; setAISize("max")
-    else AISettings.aiSize = "small"; setAISize("small") end
-    saveAISettings()
-end)
-
--- Keep scrolls sized initially
-task.defer(function()
-    pcall(function()
-        scroll.CanvasSize = UDim2.new(0,0,0,listLayout.AbsoluteContentSize.Y + 40)
-        chatScroll.CanvasSize = UDim2.new(0,0,0,chatLayout.AbsoluteContentSize.Y + 20)
-    end)
-end)
-
--- End of merged main.lua
