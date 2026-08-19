@@ -1,6 +1,5 @@
 -- Project Games | Brookhaven Emitter Master V12 (BEST VERSION)
 -- Full Max | Categorized | Multi-Select & Search | PC & Mobile Responsive | Bug-Free
--- Geliştirildi: (2) Eski GUI doğru temizlenir, (2) multi metin hatası düzeltildi, (3) MAX_MULTI_SELECT eklendi, (4) M tuşu ile toggle, (5) kart hover tooltip.
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -9,10 +8,9 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
--- Eğer daha önce aynı GUI varsa güvenli biçimde sil (farklı isimleri de kontrol et)
-local existingGui = CoreGui:FindFirstChild("Mars Hub") or CoreGui:FindFirstChild("ProjectGames_System")
-if existingGui then
-    existingGui:Destroy()
+-- Temizlik (Eski UI varsa sil ve memory leak'leri önle)
+if CoreGui:FindFirstChild("ProjectGames_System") then 
+    CoreGui.ProjectGames_System:Destroy() 
 end
 
 local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ApplyEmmiter")
@@ -20,11 +18,6 @@ local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ApplyEmmi
 -- Özel Logo ID'leri
 local PREMIUM_ICON = "rbxassetid://6010710098"
 local VIP_ICON = "rbxassetid://18248037214"
-
--- Topbar Icon ayarları (buradan isim ve ikon değiştirilebilir)
-local TOPBAR_NAME = "Mars Hub" -- objenin Name (obje adı); tooltip için kullanılıyor
-local TOPBAR_ICON = "rbxassetid://125614278681229" -- değiştir: istediğin asset id
-local TOPBAR_SIZE = 48 -- ikon boyutu (px). "max full" istiyorsan burayı büyüt.
 
 -- [1]=ID, [2]=Arg, [3]=Name, [4]=IconID, [5]=isVIP, [6]=isRP
 local emitterData = {
@@ -108,20 +101,6 @@ mainGui.Parent = CoreGui
 mainGui.ResetOnSpawn = false
 mainGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Basit tooltip (kart hover için)
-local tooltip = Instance.new("TextLabel")
-tooltip.Name = "EmitterTooltip"
-tooltip.Size = UDim2.new(0, 200, 0, 24)
-tooltip.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-tooltip.TextColor3 = Color3.fromRGB(240, 240, 240)
-tooltip.TextSize = 14
-tooltip.Font = Enum.Font.Gotham
-tooltip.Visible = false
-tooltip.BackgroundTransparency = 0.05
-tooltip.AnchorPoint = Vector2.new(0, 0)
-tooltip.Parent = mainGui
-Instance.new("UICorner", tooltip).CornerRadius = UDim.new(0, 6)
-
 -- Gelişmiş & Pürüzsüz Drag Fonksiyonu
 local function makeSmoothDrag(obj)
     local dragging = false
@@ -158,43 +137,42 @@ local function makeSmoothDrag(obj)
     end)
 end
 
--- Topbar Icon (sürüklenemez, sabit topbar tarzı)
-local topbarBtn = Instance.new("ImageButton")
-topbarBtn.Name = "TopbarIcon"
-topbarBtn.Size = UDim2.new(0, TOPBAR_SIZE, 0, TOPBAR_SIZE)
-topbarBtn.AnchorPoint = Vector2.new(1, 0)
-topbarBtn.Position = UDim2.new(1, -12, 0, 8) -- sağ üst köşeye yakın
-topbarBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-topbarBtn.Image = TOPBAR_ICON
-topbarBtn.Parent = mainGui
-topbarBtn.ZIndex = 50
-Instance.new("UICorner", topbarBtn).CornerRadius = UDim.new(0, 8)
+-- Sürüklenebilir Logo
+local openBtn = Instance.new("ImageButton")
+openBtn.Name = "AnimatedProjectButton"
+openBtn.Size = UDim2.new(0, 60, 0, 60)
+openBtn.Position = UDim2.new(0, 15, 0.5, -30)
+openBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+openBtn.Image = "http://www.roblox.com/asset/?id=125614278681229"
+openBtn.Parent = mainGui
 
-local topbarStroke = Instance.new("UIStroke", topbarBtn)
-topbarStroke.Thickness = 2
-topbarStroke.Color = Color3.fromRGB(130, 0, 255)
+Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0, 12)
 
-local topbarGradient = Instance.new("UIGradient")
-topbarGradient.Rotation = 90
-topbarGradient.Parent = topbarBtn
+local openStroke = Instance.new("UIStroke", openBtn)
+openStroke.Thickness = 2
+openStroke.Color = Color3.fromRGB(130, 0, 255)
 
--- Hafif animasyon (orijinal döngü korunuyor)
+local gradient = Instance.new("UIGradient")
+gradient.Rotation = 90
+gradient.Parent = openBtn
+
+-- Memory Leak Korumalı Animasyon Döngüsü
 task.spawn(function()
     local counter = 0
     while task.wait(0.03) do
-        if not topbarBtn or not topbarBtn.Parent then break end
+        if not openBtn or not openBtn.Parent then break end 
         counter = counter + 0.01
         local rainbowColor1 = Color3.fromHSV(math.abs(math.sin(counter)), 1, 1)
         local purpleVibe = Color3.fromRGB(130, 0, 255)
-        topbarGradient.Color = ColorSequence.new({
+        gradient.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, rainbowColor1),
             ColorSequenceKeypoint.new(1, purpleVibe)
         })
-        topbarStroke.Color = purpleVibe:Lerp(rainbowColor1, 0.5)
+        openStroke.Color = purpleVibe:Lerp(rainbowColor1, 0.5)
     end
 end)
 
--- Not: artık topbarBtn sürüklenemez, o yüzden makeSmoothDrag çağrılmıyor.
+makeSmoothDrag(openBtn)
 
 -- Ana Panel (Responsive Yatay Tasarım)
 local main = Instance.new("Frame")
@@ -267,7 +245,7 @@ multiBtn.AnchorPoint = Vector2.new(1, 0.5)
 multiBtn.Position = UDim2.new(1, -200, 0.5, 0)
 multiBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 multiBtn.TextColor3 = Color3.fromRGB(255, 85, 85)
-multiBtn.Text = "Offline" -- başlangıç durumu
+multiBtn.Text = "Offline"
 multiBtn.Font = Enum.Font.GothamBold
 multiBtn.TextSize = 12
 multiBtn.Parent = top
@@ -334,18 +312,15 @@ local premiumCont = createCategory("Emitters (VIP & Premium)", 2)
 local cardTable = {}
 local activeCards = {}
 local multiEnabled = false
-local MAX_MULTI_SELECT = 4 -- istenirse buradan değiştirilebilir
 
 -- Güvenli Emitter Uygulama (Asenkron ve Çökme Korumalı)
 local function applyEmitterSafe(id, arg)
     task.spawn(function()
-        local ok, err = pcall(function()
+        pcall(function()
             if remote and remote.Parent then
-                -- remote:InvokeServer şeklinde doğrudan çağrı pcall içinde
                 remote:InvokeServer(id, arg)
             end
         end)
-        -- hata varsa istersen buraya log ekleyebilirsin (şimdilik sessiz)
     end)
 end
 
@@ -353,11 +328,11 @@ end
 multiBtn.MouseButton1Click:Connect(function()
     multiEnabled = not multiEnabled
     if multiEnabled then
-        multiBtn.Text = "Multi"
+        multiBtn.Text = "Patched"
         multiBtn.TextColor3 = Color3.fromRGB(85, 255, 85)
         multiStroke.Color = Color3.fromRGB(85, 255, 85)
     else
-        multiBtn.Text = "Offline"
+        multiBtn.Text = "Patched"
         multiBtn.TextColor3 = Color3.fromRGB(255, 85, 85)
         multiStroke.Color = Color3.fromRGB(40, 40, 45)
         
@@ -416,18 +391,6 @@ for _, d in ipairs(emitterData) do
         rLogo.Parent = card
     end
 
-    -- Tooltip gösterimi
-    card.MouseEnter:Connect(function()
-        tooltip.Text = d[3]
-        local mousePos = UserInputService:GetMouseLocation()
-        -- küçük offset ile mouse'un sağ-altında göster
-        tooltip.Position = UDim2.new(0, mousePos.X + 10, 0, mousePos.Y + 10)
-        tooltip.Visible = true
-    end)
-    card.MouseLeave:Connect(function()
-        tooltip.Visible = false
-    end)
-
     card.MouseButton1Click:Connect(function()
         if multiEnabled then
             if activeCards[card] then
@@ -436,7 +399,7 @@ for _, d in ipairs(emitterData) do
             else
                 local count = 0
                 for _ in pairs(activeCards) do count = count + 1 end
-                if count < MAX_MULTI_SELECT then
+                if count < 4 then
                     activeCards[card] = true
                     stroke.Color = Color3.fromRGB(255, 85, 0)
                     applyEmitterSafe(d[1], d[2])
@@ -478,16 +441,8 @@ local function toggleUI()
     main:TweenPosition(open and UDim2.new(0.5, 0, 0.5, 0) or UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
 end
 
-topbarBtn.MouseButton1Click:Connect(toggleUI) -- Topbar butonuyla toggle
+openBtn.MouseButton1Click:Connect(toggleUI)
 close.MouseButton1Click:Connect(toggleUI)
-
--- Klavye kısayolu: M ile toggle (oyun işlenmiş input'larını bozmaz)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.M then
-        toggleUI()
-    end
-end)
 
 -- Scroll Canvas Dinamik Güncelleme
 listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
