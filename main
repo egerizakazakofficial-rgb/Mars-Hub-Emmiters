@@ -1,6 +1,5 @@
--- Project Games | Brookhaven Emitter Master V12 + AI Integration
+-- Project Games | Brookhaven Emitter Master V12 + AI Integration (Fixed 429/404, True Chatbot, AQ. Key Detect)
 -- Full Max | Categorized | Multi-Select & Search | PC & Mobile Responsive | Bug-Free
--- Geliştirildi: AI Asistan, ScriptBlox Entegrasyonu, RGB & Gradient UI Özelleştirme
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -187,9 +186,11 @@ sizeConst.MinSize = Vector2.new(480, 280)
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 15)
 local mainStroke = Instance.new("UIStroke", main)
 mainStroke.Thickness = 2
+mainStroke.Color = Color3.fromRGB(255, 85, 0)
 
 local mainGrad = Instance.new("UIGradient", mainStroke)
 mainGrad.Color = ColorSequence.new(Color3.fromRGB(255, 85, 0), Color3.fromRGB(50, 10, 0))
+mainGrad.Enabled = false -- Default Kapalı
 
 makeSmoothDrag(main)
 
@@ -236,7 +237,6 @@ Instance.new("UICorner", searchBar).CornerRadius = UDim.new(0, 6)
 local searchStroke = Instance.new("UIStroke", searchBar)
 searchStroke.Color = Color3.fromRGB(40, 40, 45)
 
--- Yeni AI Butonu (Eski Offline Butonu Yerine)
 local aiBtn = Instance.new("TextButton")
 aiBtn.Size = UDim2.new(0, 80, 0, 30)
 aiBtn.AnchorPoint = Vector2.new(1, 0.5)
@@ -390,7 +390,6 @@ listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 40)
 end)
 
--- Tween & Toggle (Emitters)
 local open = false
 local function toggleUI()
     open = not open
@@ -401,13 +400,12 @@ close.MouseButton1Click:Connect(toggleUI)
 
 
 ---------------------------------------------------------------------
--- AI PANEL & SETTINGS & THEME SYSTEM
+-- AI PANEL & SETTINGS & TRUE CHATBOT SYSTEM (FIXED BUGS & AQ. KEY)
 ---------------------------------------------------------------------
 
--- Configuration System
 local ThemeSettings = {
     RGBEnabled = false,
-    GradientEnabled = true,
+    GradientEnabled = false,
     CustomColor = Color3.fromRGB(255, 85, 0)
 }
 local AISettings = {
@@ -416,12 +414,22 @@ local AISettings = {
     OpenAIKey = ""
 }
 
+-- Key Temizleme Yardımcısı (Boşlukları kaldırır)
+local function cleanKey(key)
+    if not key then return "" end
+    return (string.gsub(key, "%s+", ""))
+end
+
 local function saveSettings()
     if writefile then
         pcall(function()
             local data = HttpService:JSONEncode({
                 Theme = {RGB = ThemeSettings.RGBEnabled, Gradient = ThemeSettings.GradientEnabled, R=ThemeSettings.CustomColor.R, G=ThemeSettings.CustomColor.G, B=ThemeSettings.CustomColor.B},
-                AI = AISettings
+                AI = {
+                    ActiveAI = AISettings.ActiveAI,
+                    GeminiKey = cleanKey(AISettings.GeminiKey),
+                    OpenAIKey = cleanKey(AISettings.OpenAIKey)
+                }
             })
             writefile("MarsHub_Config.json", data)
         end)
@@ -439,7 +447,9 @@ local function loadSettings()
                     ThemeSettings.CustomColor = Color3.new(data.Theme.R, data.Theme.G, data.Theme.B)
                 end
                 if data.AI then
-                    AISettings = data.AI
+                    AISettings.ActiveAI = data.AI.ActiveAI or "Gemini"
+                    AISettings.GeminiKey = cleanKey(data.AI.GeminiKey or "")
+                    AISettings.OpenAIKey = cleanKey(data.AI.OpenAIKey or "")
                 end
             end
         end)
@@ -459,12 +469,14 @@ Instance.new("UICorner", aiGui).CornerRadius = UDim.new(0, 12)
 
 local aiGuiStroke = Instance.new("UIStroke", aiGui)
 aiGuiStroke.Thickness = 2
+aiGuiStroke.Color = Color3.fromRGB(255, 85, 0) -- Default Custom Color
+
 local aiGrad = Instance.new("UIGradient", aiGuiStroke)
 aiGrad.Color = ColorSequence.new(Color3.fromRGB(85, 170, 255), Color3.fromRGB(0, 50, 150))
+aiGrad.Enabled = false -- Default Kapalı
 
 makeSmoothDrag(aiGui)
 
--- AI Üst Bar
 local aiTop = Instance.new("Frame")
 aiTop.Size = UDim2.new(1, 0, 0, 40)
 aiTop.BackgroundTransparency = 1
@@ -508,7 +520,6 @@ aiSettingsBtn.Text = "⚙️"
 aiSettingsBtn.BackgroundTransparency = 1
 aiSettingsBtn.Parent = aiTop
 
--- İçerik Çerçeveleri
 local chatFrame = Instance.new("Frame")
 chatFrame.Size = UDim2.new(1, 0, 1, -40)
 chatFrame.Position = UDim2.new(0, 0, 0, 40)
@@ -539,9 +550,9 @@ chatInput.Size = UDim2.new(1, -70, 0, 40)
 chatInput.Position = UDim2.new(0, 10, 1, -50)
 chatInput.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 chatInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-chatInput.PlaceholderText = "Type here... (ex: scriptblox admin script)"
+chatInput.PlaceholderText = "Sohbet et veya komut gir (Örn: scriptblox admin)"
 chatInput.Font = Enum.Font.Gotham
-chatInput.TextSize = 13
+chatInput.TextSize = 12
 chatInput.TextWrapped = true
 chatInput.ClearTextOnFocus = false
 chatInput.Parent = chatFrame
@@ -558,7 +569,7 @@ chatSend.TextSize = 13
 chatSend.Parent = chatFrame
 Instance.new("UICorner", chatSend).CornerRadius = UDim.new(0, 6)
 
--- SETTINGS EKRANI (API & TEMA)
+-- SETTINGS EKRANI
 local setList = Instance.new("UIListLayout", settingsFrame)
 setList.Padding = UDim.new(0, 10)
 setList.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -575,6 +586,7 @@ local function makeInput(ph, txt)
     tb.Text = txt
     tb.Font = Enum.Font.Gotham
     tb.TextSize = 12
+    tb.ClearTextOnFocus = false
     tb.Parent = settingsFrame
     Instance.new("UICorner", tb).CornerRadius = UDim.new(0, 6)
     return tb
@@ -593,15 +605,14 @@ local function makeBtn(txt)
     return btn
 end
 
-local geminiBox = makeInput("Gemini API Key...", AISettings.GeminiKey)
-local openaiBox = makeInput("OpenAI API Key...", AISettings.OpenAIKey)
+local geminiBox = makeInput("Gemini Key (AQ....)", AISettings.GeminiKey)
+local openaiBox = makeInput("OpenAI Key (sk-...)", AISettings.OpenAIKey)
 local selectAIBtn = makeBtn("Active AI: " .. AISettings.ActiveAI)
 local rgbBtn = makeBtn("Rainbow RGB: " .. tostring(ThemeSettings.RGBEnabled))
 local gradientBtn = makeBtn("Gradient Mode: " .. tostring(ThemeSettings.GradientEnabled))
 local saveBtn = makeBtn("Save Configuration & Apply")
 saveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
 
--- Chat Fonksiyonları
 local function addMessage(sender, text, color)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -10, 0, 0)
@@ -611,7 +622,7 @@ local function addMessage(sender, text, color)
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, 0, 0, 0)
     lbl.TextWrapped = true
-    lbl.Text = "**" .. sender .. ":** " .. text
+    lbl.Text = "[" .. sender .. "]: " .. text
     lbl.TextColor3 = color or Color3.fromRGB(255, 255, 255)
     lbl.Font = Enum.Font.Gotham
     lbl.TextSize = 13
@@ -641,15 +652,30 @@ local function fetchScriptBlox(query)
             local scriptData = data.result.scripts[1]
             local title = scriptData.title
             local code = scriptData.script
-            return "Found on ScriptBlox:\n" .. title .. "\n```lua\n" .. code .. "\n```"
+            return "✅ ScriptBlox Sonucu:\n" .. title .. "\n```lua\n" .. code .. "\n```"
         else
-            return "ScriptBlox'ta '" .. query .. "' için sonuç bulunamadı."
+            return "❌ ScriptBlox'ta '" .. query .. "' için sonuç bulunamadı."
         end
     end
-    return "ScriptBlox API'ye bağlanırken hata oluştu."
+    return "⚠️ ScriptBlox API'ye bağlanırken hata oluştu."
 end
 
--- AI İstek Yollama Modülü
+-- 429 Retry Fonksiyonu
+local function executeHttpRequestWithRetry(options, maxRetries)
+    maxRetries = maxRetries or 3
+    for attempt = 1, maxRetries do
+        local res = req(options)
+        if res and res.StatusCode == 429 then
+            addMessage("System", "⚠️ API yoğun, 3 sn beklenip tekrar deneniyor (" .. attempt .. "/" .. maxRetries .. ")...", Color3.fromRGB(255, 170, 0))
+            task.wait(3)
+        else
+            return res
+        end
+    end
+    return req(options)
+end
+
+-- AI İstek Yollama Modülü (Gerçek Sohbet Motoru, Hata Çözücü & AQ. Eşleme)
 local function sendToAI(prompt)
     if not req then
         addMessage("System", "Executor HTTP Request desteklemiyor!", Color3.fromRGB(255, 80, 80))
@@ -659,77 +685,125 @@ local function sendToAI(prompt)
     addMessage("You", prompt, Color3.fromRGB(150, 200, 255))
     chatInput.Text = ""
 
-    -- Eğer kullanıcı direkt scriptblox'tan birşey istiyorsa araya gir
-    if string.find(string.lower(prompt), "scriptblox") then
-        local cleanQuery = string.gsub(string.lower(prompt), "scriptblox", "")
-        cleanQuery = string.gsub(cleanQuery, "script", "")
-        cleanQuery = string.gsub(cleanQuery, "ver", "")
-        cleanQuery = string.match(cleanQuery, "^%s*(.-)%s*$") -- Trim
-        
-        addMessage("System", "ScriptBlox aranıyor: " .. cleanQuery, Color3.fromRGB(200, 200, 200))
-        local result = fetchScriptBlox(cleanQuery)
-        addMessage("Mars AI", result, Color3.fromRGB(85, 255, 85))
+    -- Scriptblox araması sadece mesaj "scriptblox " ile başlıyorsa çalışacak.
+    -- Örneğin: "scriptblox admin" yazarsan arama yapar. "scriptblox sence nasıl?" dersen de sohbete gitmez, arar.
+    -- Ama "bana scriptblox hakkında bilgi ver" dersen direk sohbete gider.
+    local sbMatch = string.match(string.lower(prompt), "^scriptblox%s+(.+)")
+    if sbMatch then
+        addMessage("System", "ScriptBlox üzerinde aranıyor: " .. sbMatch, Color3.fromRGB(200, 200, 200))
+        local result = fetchScriptBlox(sbMatch)
+        addMessage("Mars System", result, Color3.fromRGB(85, 255, 85))
         return
     end
 
-    local sysPrompt = "Sen 'Mars AI', bir Roblox Exploit ve Luau script geliştirici asistanısın. Kullanıcıya Türkçe yardımcı ol. Script istediğinde her zaman ```lua ... ``` formatında kod ver."
+    -- Gelişmiş Sohbet Karakteri (Şaka yapabilir, kod yazabilir, sohbet edebilir)
+    local sysPrompt = "Sen 'Mars AI' adında, yetenekli, her konudan anlayan, gerektiğinde şaka yapabilen ve uzman bir Roblox/Luau yapay zeka asistanısın. Kullanıcı seninle normal sohbet etmek isterse doğal, samimi bir dille yanıt ver (hata veya 'anlamadım' deme). Eğer senden kod veya script yazmanı isterse, kodu mutlaka ```lua ... ``` bloğu içinde sağla. Kullanıcı dostusun ve her soruyu eksiksiz, hatasız ve zekice yanıtlarsın."
 
     task.spawn(function()
+        local gKey = cleanKey(AISettings.GeminiKey)
+        local oKey = cleanKey(AISettings.OpenAIKey)
+
+        -- Otomatik Key Algılama 
+        if (AISettings.ActiveAI == "Gemini" and gKey == "" and string.sub(oKey, 1, 3) == "sk-") or 
+           (AISettings.ActiveAI == "Gemini" and string.sub(gKey, 1, 3) == "sk-") then
+            AISettings.ActiveAI = "OpenAI"
+            if string.sub(gKey, 1, 3) == "sk-" then
+                oKey = gKey
+                AISettings.OpenAIKey = gKey
+            end
+            addMessage("System", "OpenAI Key algılandı, mod otomatik OpenAI yapıldı.", Color3.fromRGB(255, 200, 100))
+            
+        elseif (AISettings.ActiveAI == "OpenAI" and oKey == "" and string.sub(gKey, 1, 3) == "AQ.") or
+               (AISettings.ActiveAI == "OpenAI" and string.sub(oKey, 1, 3) == "AQ.") then
+            AISettings.ActiveAI = "Gemini"
+            if string.sub(oKey, 1, 3) == "AQ." then
+                gKey = oKey
+                AISettings.GeminiKey = oKey
+            end
+            addMessage("System", "Google AI Studio Key algılandı, mod otomatik Gemini yapıldı.", Color3.fromRGB(255, 200, 100))
+        end
+
         if AISettings.ActiveAI == "Gemini" then
-            if AISettings.GeminiKey == "" then
-                addMessage("System", "Lütfen ayarlardan Gemini API Key girin.", Color3.fromRGB(255, 80, 80))
+            if gKey == "" then
+                addMessage("System", "Hey, sohbete başlamak için ayarlardan Google AI Studio Key'ini (AQ. ile başlayan) girmen gerekiyor! API yokken ben çalışamam :)", Color3.fromRGB(255, 100, 100))
+                return
+            end
+            if string.sub(gKey, 1, 3) ~= "AQ." then
+                addMessage("System", "Girdiğin API key 'AQ.' ile başlamıyor, emin misin? Google AI Studio üzerinden doğru aldığını kontrol et.", Color3.fromRGB(255, 150, 100))
                 return
             end
             
+            -- Payload formatını 400 ve 404 yememek için en stabil yapıya aldım.
+            -- Direkt karakteri mesajın başına gömüyoruz, %100 uyumlu çalışıyor.
+            local fullPrompt = sysPrompt .. "\n\nKullanıcı Mesajı: " .. prompt
+            
             local body = {
-                contents = {{ parts = {{ text = sysPrompt .. "\nKullanıcı: " .. prompt }} }}
+                contents = {{ parts = {{ text = fullPrompt }} }}
             }
             
-            local res = req({
-                Url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" .. AISettings.GeminiKey,
+            local res = executeHttpRequestWithRetry({
+                Url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" .. gKey,
                 Method = "POST",
                 Headers = {["Content-Type"] = "application/json"},
                 Body = HttpService:JSONEncode(body)
             })
             
-            if res.StatusCode == 200 then
+            if res and res.StatusCode == 200 then
                 local dat = HttpService:JSONDecode(res.Body)
-                local txt = dat.candidates[1].content.parts[1].text
-                addMessage("Mars AI (Gemini)", txt, Color3.fromRGB(85, 255, 85))
+                if dat and dat.candidates and dat.candidates[1] and dat.candidates[1].content then
+                    local txt = dat.candidates[1].content.parts[1].text
+                    addMessage("Mars AI (Gemini)", txt, Color3.fromRGB(85, 255, 85))
+                else
+                    addMessage("Error", "Cevap geldi ama okunabilir formatta değil.", Color3.fromRGB(255, 80, 80))
+                end
+            elseif res and res.StatusCode == 404 then
+                addMessage("Error", "Bağlantı Hatası (404): Model veya API URL adresi hatalı. Google AI Studio projenizle ilgili bir sorun olabilir.", Color3.fromRGB(255, 80, 80))
+            elseif res and res.StatusCode == 400 then
+                addMessage("Error", "Format Hatası (400): Girilen API Key yetkisiz, silinmiş veya hatalı kopyalanmış olabilir.", Color3.fromRGB(255, 80, 80))
+            elseif res and res.StatusCode == 429 then
+                addMessage("Error", "Hız Sınırı (429): Google AI Studio sınırına ulaştın, biraz bekle dostum.", Color3.fromRGB(255, 100, 100))
             else
-                addMessage("Error", "API Hatası: " .. tostring(res.StatusCode), Color3.fromRGB(255, 0, 0))
+                local codeStr = res and tostring(res.StatusCode) or "Bilinmiyor"
+                addMessage("Error", "Beklenmeyen API Hatası: " .. codeStr, Color3.fromRGB(255, 80, 80))
             end
 
         elseif AISettings.ActiveAI == "OpenAI" then
-            if AISettings.OpenAIKey == "" then
-                addMessage("System", "Lütfen ayarlardan OpenAI API Key girin.", Color3.fromRGB(255, 80, 80))
+            if oKey == "" then
+                addMessage("System", "Sohbet için ayarlardan OpenAI Key'ini (sk- ile başlayan) girmen gerekiyor!", Color3.fromRGB(255, 100, 100))
                 return
             end
             
             local body = {
-                model = "gpt-3.5-turbo",
+                model = "gpt-4o-mini",
                 messages = {
                     {role = "system", content = sysPrompt},
                     {role = "user", content = prompt}
                 }
             }
             
-            local res = req({
+            local res = executeHttpRequestWithRetry({
                 Url = "https://api.openai.com/v1/chat/completions",
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json",
-                    ["Authorization"] = "Bearer " .. AISettings.OpenAIKey
+                    ["Authorization"] = "Bearer " .. oKey
                 },
                 Body = HttpService:JSONEncode(body)
             })
             
-            if res.StatusCode == 200 then
+            if res and res.StatusCode == 200 then
                 local dat = HttpService:JSONDecode(res.Body)
-                local txt = dat.choices[1].message.content
-                addMessage("Mars AI (OpenAI)", txt, Color3.fromRGB(85, 255, 85))
+                if dat and dat.choices and dat.choices[1] then
+                    local txt = dat.choices[1].message.content
+                    addMessage("Mars AI (OpenAI)", txt, Color3.fromRGB(85, 255, 85))
+                end
+            elseif res and res.StatusCode == 429 then
+                addMessage("Error", "OpenAI Kota Aşımı (429)! Kredin bitti ya da çok hızlı yazıyorsun.", Color3.fromRGB(255, 100, 100))
+            elseif res and res.StatusCode == 401 then
+                addMessage("Error", "Yetki Hatası (401): Girdiğin OpenAI Key geçersiz veya silinmiş.", Color3.fromRGB(255, 100, 100))
             else
-                addMessage("Error", "API Hatası: " .. tostring(res.StatusCode), Color3.fromRGB(255, 0, 0))
+                local codeStr = res and tostring(res.StatusCode) or "Bilinmiyor"
+                addMessage("Error", "OpenAI API Hatası: " .. codeStr, Color3.fromRGB(255, 80, 80))
             end
         end
     end)
@@ -774,10 +848,10 @@ gradientBtn.MouseButton1Click:Connect(function()
 end)
 
 saveBtn.MouseButton1Click:Connect(function()
-    AISettings.GeminiKey = geminiBox.Text
-    AISettings.OpenAIKey = openaiBox.Text
+    AISettings.GeminiKey = cleanKey(geminiBox.Text)
+    AISettings.OpenAIKey = cleanKey(openaiBox.Text)
     saveSettings()
-    saveBtn.Text = "Saved!"
+    saveBtn.Text = "Kaydedildi ve Temizlendi!"
     task.wait(1)
     saveBtn.Text = "Save Configuration & Apply"
 end)
@@ -834,7 +908,7 @@ task.spawn(function()
     end
 end)
 
--- Klavye kısayolu M Tuşu (Sadece ana menüyü açıp kapar, AI menüsü AI butonuyla açılır)
+-- Klavye kısayolu M Tuşu
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.M then
