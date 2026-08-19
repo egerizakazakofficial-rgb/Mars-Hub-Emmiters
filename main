@@ -1,6 +1,6 @@
 -- Project Games | Brookhaven Emitter Master V12 (BEST VERSION)
 -- Full Max | Categorized | Multi-Select & Search | PC & Mobile Responsive | Bug-Free
--- Geliştirildi: (1) Eski GUI doğru temizlenir, (2) multi metin hatası düzeltildi, (3) MAX_MULTI_SELECT eklendi, (4) M tuşu ile toggle, (5) kart hover tooltip.
+-- Geliştirildi: (2) Eski GUI doğru temizlenir, (2) multi metin hatası düzeltildi, (3) MAX_MULTI_SELECT eklendi, (4) M tuşu ile toggle, (5) kart hover tooltip.
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
