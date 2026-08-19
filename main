@@ -93,7 +93,15 @@ local emitterData = {
 -- UI Setup
 local mainGui = Instance.new("ScreenGui")
 mainGui.Name = "Mars Hub"
-mainGui.Parent = CoreGui
+-- Prefer PlayerGui when available (fix for environments where CoreGui is blocked)
+local ok, playerGui = pcall(function()
+    return Players.LocalPlayer and Players.LocalPlayer:FindFirstChild("PlayerGui")
+end)
+if ok and playerGui then
+    mainGui.Parent = playerGui
+else
+    mainGui.Parent = CoreGui
+end
 mainGui.ResetOnSpawn = false
 mainGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
@@ -161,7 +169,8 @@ makeSmoothDrag(openBtn)
 local main = Instance.new("Frame")
 main.Size = UDim2.new(0.85, 0, 0.75, 0)
 main.AnchorPoint = Vector2.new(0.5, 0.5)
-main.Position = UDim2.new(0.5, 0, 1.5, 0)
+-- Start centered so UI is visible immediately
+main.Position = UDim2.new(0.5, 0, 0.5, 0)
 main.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 main.BorderSizePixel = 0
 main.ClipsDescendants = true
@@ -378,7 +387,8 @@ listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 40)
 end)
 
-local open = false
+-- Start UI open by default
+local open = true
 local function toggleUI()
     open = not open
     main:TweenPosition(open and UDim2.new(0.5, 0, 0.5, 0) or UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
@@ -462,7 +472,8 @@ loadSettings()
 -- AI Ana Çerçevesi
 local aiGui = Instance.new("Frame")
 aiGui.Size = UDim2.new(0, 450, 0, 350)
-aiGui.Position = UDim2.new(0.5, 0, 1.5, 0)
+-- Start AI centered so it is visible
+aiGui.Position = UDim2.new(0.5, 0, 0.5, 0)
 aiGui.AnchorPoint = Vector2.new(0.5, 0.5)
 aiGui.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 aiGui.ClipsDescendants = true
@@ -956,7 +967,7 @@ aiSettingsBtn.MouseButton1Click:Connect(function()
 end)
 
 -- UI Toggle / Min / Max
-local aiOpen = false
+local aiOpen = true
 local minimized = false
 
 aiBtn.MouseButton1Click:Connect(function()
