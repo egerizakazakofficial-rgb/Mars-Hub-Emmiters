@@ -1,7 +1,4 @@
--- Project Games | Brookhaven Emitter Master V12 + AI Integration
--- Full Max | Categorized | Multi-Select & Search | PC & Mobile Responsive | Bug-Free
--- Geliştirildi: AI Asistan, ScriptBlox Entegrasyonu, RGB & Gradient UI Özelleştirme
-
+-- Project Games | Brookhaven Emitter Master V12 + AI Integration (Fixed 429 & Auth)
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -10,13 +7,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
--- Executor HTTP Request Fonksiyonu
 local req = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 if not req then
-    warn("Executor'unuz HTTP request desteklemiyor, AI özellikleri çalışmayabilir!")
+    warn("Executor HTTP request desteklemiyor!")
 end
 
--- Eğer daha önce aynı GUI varsa güvenli biçimde sil
 local existingGui = CoreGui:FindFirstChild("Mars Hub") or CoreGui:FindFirstChild("ProjectGames_System")
 if existingGui then
     existingGui:Destroy()
@@ -24,11 +19,9 @@ end
 
 local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ApplyEmmiter")
 
--- Özel Logo ID'leri
 local PREMIUM_ICON = "rbxassetid://6010710098"
 local VIP_ICON = "rbxassetid://18248037214"
 
--- [1]=ID, [2]=Arg, [3]=Name, [4]=IconID, [5]=isVIP, [6]=isRP
 local emitterData = {
     {"00000002", "0002FreeWhite", "Free White", "18635845425", false, false},
     {"00000003", "0003FreeYellow", "Free Yellow", "18635841291", false, false},
@@ -103,7 +96,6 @@ local emitterData = {
     {"00000072", "096StarRed", "Star Red", "18637949457", true, false},
 }
 
--- UI Setup
 local mainGui = Instance.new("ScreenGui")
 mainGui.Name = "Mars Hub"
 mainGui.Parent = CoreGui
@@ -119,7 +111,6 @@ tooltip.TextSize = 14
 tooltip.Font = Enum.Font.Gotham
 tooltip.Visible = false
 tooltip.BackgroundTransparency = 0.05
-tooltip.AnchorPoint = Vector2.new(0, 0)
 tooltip.Parent = mainGui
 tooltip.ZIndex = 100
 Instance.new("UICorner", tooltip).CornerRadius = UDim.new(0, 6)
@@ -132,9 +123,7 @@ local function makeSmoothDrag(obj)
             dragStart = input.Position
             startPos = obj.Position
             input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
             end)
         end
     end)
@@ -151,7 +140,6 @@ local function makeSmoothDrag(obj)
     end)
 end
 
--- Sürüklenebilir Logo
 local openBtn = Instance.new("ImageButton")
 openBtn.Name = "AnimatedProjectButton"
 openBtn.Size = UDim2.new(0, 60, 0, 60)
@@ -159,18 +147,14 @@ openBtn.Position = UDim2.new(0, 15, 0.5, -30)
 openBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 openBtn.Image = "http://www.roblox.com/asset/?id=125614278681229"
 openBtn.Parent = mainGui
-
 Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0, 12)
 local openStroke = Instance.new("UIStroke", openBtn)
 openStroke.Thickness = 2
 openStroke.Color = Color3.fromRGB(130, 0, 255)
-
 local gradientLogo = Instance.new("UIGradient", openBtn)
 gradientLogo.Rotation = 90
-
 makeSmoothDrag(openBtn)
 
--- Ana Panel
 local main = Instance.new("Frame")
 main.Size = UDim2.new(0.85, 0, 0.75, 0)
 main.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -183,17 +167,13 @@ main.Parent = mainGui
 local sizeConst = Instance.new("UISizeConstraint", main)
 sizeConst.MaxSize = Vector2.new(850, 500)
 sizeConst.MinSize = Vector2.new(480, 280)
-
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 15)
 local mainStroke = Instance.new("UIStroke", main)
 mainStroke.Thickness = 2
-
 local mainGrad = Instance.new("UIGradient", mainStroke)
 mainGrad.Color = ColorSequence.new(Color3.fromRGB(255, 85, 0), Color3.fromRGB(50, 10, 0))
-
 makeSmoothDrag(main)
 
--- Başlık & Araç Çubuğu
 local top = Instance.new("Frame")
 top.Size = UDim2.new(1, 0, 0, 55)
 top.BackgroundTransparency = 1
@@ -236,7 +216,6 @@ Instance.new("UICorner", searchBar).CornerRadius = UDim.new(0, 6)
 local searchStroke = Instance.new("UIStroke", searchBar)
 searchStroke.Color = Color3.fromRGB(40, 40, 45)
 
--- Yeni AI Butonu (Eski Offline Butonu Yerine)
 local aiBtn = Instance.new("TextButton")
 aiBtn.Size = UDim2.new(0, 80, 0, 30)
 aiBtn.AnchorPoint = Vector2.new(1, 0.5)
@@ -251,7 +230,6 @@ Instance.new("UICorner", aiBtn).CornerRadius = UDim.new(0, 6)
 local aiStroke = Instance.new("UIStroke", aiBtn)
 aiStroke.Color = Color3.fromRGB(40, 40, 45)
 
--- Scroll Alanı (Emitterlar)
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1, -15, 1, -70)
 scroll.Position = UDim2.new(0, 10, 0, 60)
@@ -303,15 +281,12 @@ end
 
 local freeCont = createCategory("Free Emitters", 1)
 local premiumCont = createCategory("Emitters (VIP & Premium)", 2)
-
 local cardTable = {}
 
 local function applyEmitterSafe(id, arg)
     task.spawn(function()
         pcall(function()
-            if remote and remote.Parent then
-                remote:InvokeServer(id, arg)
-            end
+            if remote and remote.Parent then remote:InvokeServer(id, arg) end
         end)
     end)
 end
@@ -322,10 +297,8 @@ for _, d in ipairs(emitterData) do
     card.Text = ""
     card.Parent = (d[5] or d[6]) and premiumCont or freeCont
     Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
-    
     local stroke = Instance.new("UIStroke", card)
     stroke.Color = Color3.fromRGB(40, 40, 45)
-
     cardTable[card] = d[3]:lower()
 
     local img = Instance.new("ImageLabel")
@@ -390,7 +363,6 @@ listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 40)
 end)
 
--- Tween & Toggle (Emitters)
 local open = false
 local function toggleUI()
     open = not open
@@ -399,22 +371,12 @@ end
 openBtn.MouseButton1Click:Connect(toggleUI)
 close.MouseButton1Click:Connect(toggleUI)
 
-
 ---------------------------------------------------------------------
--- AI PANEL & SETTINGS & THEME SYSTEM
+-- AI PANEL & SETTINGS (FIXED API & 429)
 ---------------------------------------------------------------------
 
--- Configuration System
-local ThemeSettings = {
-    RGBEnabled = false,
-    GradientEnabled = true,
-    CustomColor = Color3.fromRGB(255, 85, 0)
-}
-local AISettings = {
-    ActiveAI = "Gemini",
-    GeminiKey = "",
-    OpenAIKey = ""
-}
+local ThemeSettings = { RGBEnabled = false, GradientEnabled = true, CustomColor = Color3.fromRGB(255, 85, 0) }
+local AISettings = { ActiveAI = "Gemini", GeminiKey = "", OpenAIKey = "" }
 
 local function saveSettings()
     if writefile then
@@ -438,16 +400,13 @@ local function loadSettings()
                     ThemeSettings.GradientEnabled = data.Theme.Gradient
                     ThemeSettings.CustomColor = Color3.new(data.Theme.R, data.Theme.G, data.Theme.B)
                 end
-                if data.AI then
-                    AISettings = data.AI
-                end
+                if data.AI then AISettings = data.AI end
             end
         end)
     end
 end
 loadSettings()
 
--- AI Ana Çerçevesi
 local aiGui = Instance.new("Frame")
 aiGui.Size = UDim2.new(0, 450, 0, 350)
 aiGui.Position = UDim2.new(0.5, 0, 1.5, 0)
@@ -461,10 +420,8 @@ local aiGuiStroke = Instance.new("UIStroke", aiGui)
 aiGuiStroke.Thickness = 2
 local aiGrad = Instance.new("UIGradient", aiGuiStroke)
 aiGrad.Color = ColorSequence.new(Color3.fromRGB(85, 170, 255), Color3.fromRGB(0, 50, 150))
-
 makeSmoothDrag(aiGui)
 
--- AI Üst Bar
 local aiTop = Instance.new("Frame")
 aiTop.Size = UDim2.new(1, 0, 0, 40)
 aiTop.BackgroundTransparency = 1
@@ -508,7 +465,6 @@ aiSettingsBtn.Text = "⚙️"
 aiSettingsBtn.BackgroundTransparency = 1
 aiSettingsBtn.Parent = aiTop
 
--- İçerik Çerçeveleri
 local chatFrame = Instance.new("Frame")
 chatFrame.Size = UDim2.new(1, 0, 1, -40)
 chatFrame.Position = UDim2.new(0, 0, 0, 40)
@@ -522,7 +478,6 @@ settingsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 settingsFrame.Visible = false
 settingsFrame.Parent = aiGui
 
--- ÇAT SİSTEMİ EKRANI
 local chatScroll = Instance.new("ScrollingFrame")
 chatScroll.Size = UDim2.new(1, -20, 1, -60)
 chatScroll.Position = UDim2.new(0, 10, 0, 5)
@@ -539,7 +494,7 @@ chatInput.Size = UDim2.new(1, -70, 0, 40)
 chatInput.Position = UDim2.new(0, 10, 1, -50)
 chatInput.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 chatInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-chatInput.PlaceholderText = "Type here... (ex: scriptblox admin script)"
+chatInput.PlaceholderText = "Mesaj yaz... (örn: scriptblox fly script)"
 chatInput.Font = Enum.Font.Gotham
 chatInput.TextSize = 13
 chatInput.TextWrapped = true
@@ -552,13 +507,12 @@ chatSend.Size = UDim2.new(0, 50, 0, 40)
 chatSend.Position = UDim2.new(1, -60, 1, -50)
 chatSend.BackgroundColor3 = Color3.fromRGB(85, 170, 255)
 chatSend.TextColor3 = Color3.fromRGB(255, 255, 255)
-chatSend.Text = "Send"
+chatSend.Text = "Gönder"
 chatSend.Font = Enum.Font.GothamBold
 chatSend.TextSize = 13
 chatSend.Parent = chatFrame
 Instance.new("UICorner", chatSend).CornerRadius = UDim.new(0, 6)
 
--- SETTINGS EKRANI (API & TEMA)
 local setList = Instance.new("UIListLayout", settingsFrame)
 setList.Padding = UDim.new(0, 10)
 setList.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -593,15 +547,14 @@ local function makeBtn(txt)
     return btn
 end
 
-local geminiBox = makeInput("Gemini API Key...", AISettings.GeminiKey)
-local openaiBox = makeInput("OpenAI API Key...", AISettings.OpenAIKey)
-local selectAIBtn = makeBtn("Active AI: " .. AISettings.ActiveAI)
+local geminiBox = makeInput("Gemini API Key (AIza...)", AISettings.GeminiKey)
+local openaiBox = makeInput("OpenAI API Key (sk-...)", AISettings.OpenAIKey)
+local selectAIBtn = makeBtn("Aktif AI: " .. AISettings.ActiveAI)
 local rgbBtn = makeBtn("Rainbow RGB: " .. tostring(ThemeSettings.RGBEnabled))
-local gradientBtn = makeBtn("Gradient Mode: " .. tostring(ThemeSettings.GradientEnabled))
-local saveBtn = makeBtn("Save Configuration & Apply")
+local gradientBtn = makeBtn("Gradient Modu: " .. tostring(ThemeSettings.GradientEnabled))
+local saveBtn = makeBtn("Ayarları Kaydet")
 saveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
 
--- Chat Fonksiyonları
 local function addMessage(sender, text, color)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -10, 0, 0)
@@ -621,136 +574,149 @@ local function addMessage(sender, text, color)
     lbl.Parent = frame
     
     frame.AutomaticSize = Enum.AutomaticSize.Y
-    
     task.delay(0.1, function()
         chatScroll.CanvasPosition = Vector2.new(0, chatLayout.AbsoluteContentSize.Y)
     end)
 end
 
--- ScriptBlox API Entegrasyonu
 local function fetchScriptBlox(query)
     if not req then return "HTTP request desteklenmiyor." end
-    local response = req({
-        Url = "https://scriptblox.com/api/script/search?q=" .. HttpService:UrlEncode(query) .. "&max=1",
-        Method = "GET"
-    })
+    local success, response = pcall(function()
+        return req({
+            Url = "https://scriptblox.com/api/script/search?q=" .. HttpService:UrlEncode(query) .. "&max=1",
+            Method = "GET"
+        })
+    end)
     
-    if response and response.StatusCode == 200 then
+    if success and response and response.StatusCode == 200 then
         local data = HttpService:JSONDecode(response.Body)
         if data and data.result and data.result.scripts and #data.result.scripts > 0 then
             local scriptData = data.result.scripts[1]
-            local title = scriptData.title
-            local code = scriptData.script
-            return "Found on ScriptBlox:\n" .. title .. "\n```lua\n" .. code .. "\n```"
+            return "ScriptBlox Sonucu:\n" .. scriptData.title .. "\n```lua\n" .. scriptData.script .. "\n```"
         else
             return "ScriptBlox'ta '" .. query .. "' için sonuç bulunamadı."
         end
     end
-    return "ScriptBlox API'ye bağlanırken hata oluştu."
+    return "ScriptBlox API bağlantı hatası."
 end
 
--- AI İstek Yollama Modülü
 local function sendToAI(prompt)
     if not req then
-        addMessage("System", "Executor HTTP Request desteklemiyor!", Color3.fromRGB(255, 80, 80))
+        addMessage("Sistem", "Executor HTTP Request desteklemiyor!", Color3.fromRGB(255, 80, 80))
         return
     end
 
-    addMessage("You", prompt, Color3.fromRGB(150, 200, 255))
+    addMessage("Sen", prompt, Color3.fromRGB(150, 200, 255))
     chatInput.Text = ""
 
-    -- Eğer kullanıcı direkt scriptblox'tan birşey istiyorsa araya gir
     if string.find(string.lower(prompt), "scriptblox") then
         local cleanQuery = string.gsub(string.lower(prompt), "scriptblox", "")
-        cleanQuery = string.gsub(cleanQuery, "script", "")
-        cleanQuery = string.gsub(cleanQuery, "ver", "")
-        cleanQuery = string.match(cleanQuery, "^%s*(.-)%s*$") -- Trim
-        
-        addMessage("System", "ScriptBlox aranıyor: " .. cleanQuery, Color3.fromRGB(200, 200, 200))
+        cleanQuery = string.match(cleanQuery, "^%s*(.-)%s*$")
+        addMessage("Sistem", "ScriptBlox taranıyor...", Color3.fromRGB(200, 200, 200))
         local result = fetchScriptBlox(cleanQuery)
         addMessage("Mars AI", result, Color3.fromRGB(85, 255, 85))
         return
     end
 
-    local sysPrompt = "Sen 'Mars AI', bir Roblox Exploit ve Luau script geliştirici asistanısın. Kullanıcıya Türkçe yardımcı ol. Script istediğinde her zaman ```lua ... ``` formatında kod ver."
+    local sysPrompt = "Sen Mars AI, Roblox Luau script uzmanısın. Türkçe yanıt ver ve script isteklerinde kesinlikle ```lua ... ``` kullan."
 
     task.spawn(function()
         if AISettings.ActiveAI == "Gemini" then
-            if AISettings.GeminiKey == "" then
-                addMessage("System", "Lütfen ayarlardan Gemini API Key girin.", Color3.fromRGB(255, 80, 80))
+            if AISettings.GeminiKey == "" or not string.find(AISettings.GeminiKey, "^AIza") then
+                addMessage("Sistem", "Geçersiz Gemini Key! 'AIza' ile başlamalı.", Color3.fromRGB(255, 80, 80))
                 return
             end
             
-            local body = {
+            -- 429 Hatalarını önlemek için en kararlı güncel endpoint
+            local url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" .. AISettings.GeminiKey
+            local body = HttpService:JSONEncode({
                 contents = {{ parts = {{ text = sysPrompt .. "\nKullanıcı: " .. prompt }} }}
-            }
-            
-            local res = req({
-                Url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" .. AISettings.GeminiKey,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = HttpService:JSONEncode(body)
             })
             
-            if res.StatusCode == 200 then
-                local dat = HttpService:JSONDecode(res.Body)
-                local txt = dat.candidates[1].content.parts[1].text
-                addMessage("Mars AI (Gemini)", txt, Color3.fromRGB(85, 255, 85))
+            local success, res = pcall(function()
+                return req({
+                    Url = url,
+                    Method = "POST",
+                    Headers = {["Content-Type"] = "application/json"},
+                    Body = body
+                })
+            end)
+            
+            if success and res then
+                if res.StatusCode == 200 then
+                    local dat = HttpService:JSONDecode(res.Body)
+                    if dat and dat.candidates and dat.candidates[1].content.parts[1].text then
+                        addMessage("Mars AI (Gemini)", dat.candidates[1].content.parts[1].text, Color3.fromRGB(85, 255, 85))
+                    else
+                        addMessage("Hata", "API yanıt yapısı uyuşmuyor.", Color3.fromRGB(255, 0, 0))
+                    end
+                elseif res.StatusCode == 429 then
+                    addMessage("Hata (429)", "Çok fazla istek atıldı (Rate Limit). Lütfen birkaç saniye bekleyin.", Color3.fromRGB(255, 100, 100))
+                else
+                    addMessage("Hata", "Gemini API Hatası Kod: " .. tostring(res.StatusCode) .. " | " .. tostring(res.Body), Color3.fromRGB(255, 0, 0))
+                end
             else
-                addMessage("Error", "API Hatası: " .. tostring(res.StatusCode), Color3.fromRGB(255, 0, 0))
+                addMessage("Hata", "Bağlantı kurulamadı.", Color3.fromRGB(255, 0, 0))
             end
 
         elseif AISettings.ActiveAI == "OpenAI" then
-            if AISettings.OpenAIKey == "" then
-                addMessage("System", "Lütfen ayarlardan OpenAI API Key girin.", Color3.fromRGB(255, 80, 80))
+            if AISettings.OpenAIKey == "" or not string.find(AISettings.OpenAIKey, "^sk%-") then
+                addMessage("Sistem", "Geçersiz OpenAI Key! 'sk-' ile başlamalı.", Color3.fromRGB(255, 80, 80))
                 return
             end
             
-            local body = {
+            local url = "https://api.openai.com/v1/chat/completions"
+            local body = HttpService:JSONEncode({
                 model = "gpt-3.5-turbo",
                 messages = {
                     {role = "system", content = sysPrompt},
                     {role = "user", content = prompt}
                 }
-            }
-            
-            local res = req({
-                Url = "https://api.openai.com/v1/chat/completions",
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json",
-                    ["Authorization"] = "Bearer " .. AISettings.OpenAIKey
-                },
-                Body = HttpService:JSONEncode(body)
             })
             
-            if res.StatusCode == 200 then
-                local dat = HttpService:JSONDecode(res.Body)
-                local txt = dat.choices[1].message.content
-                addMessage("Mars AI (OpenAI)", txt, Color3.fromRGB(85, 255, 85))
+            local success, res = pcall(function()
+                return req({
+                    Url = url,
+                    Method = "POST",
+                    Headers = {
+                        ["Content-Type"] = "application/json",
+                        ["Authorization"] = "Bearer " .. AISettings.OpenAIKey
+                    },
+                    Body = body
+                })
+            end)
+            
+            if success and res then
+                if res.StatusCode == 200 then
+                    local dat = HttpService:JSONDecode(res.Body)
+                    if dat and dat.choices and dat.choices[1].message.content then
+                        addMessage("Mars AI (OpenAI)", dat.choices[1].message.content, Color3.fromRGB(85, 255, 85))
+                    else
+                        addMessage("Hata", "OpenAI yanıt yapısı uyuşmuyor.", Color3.fromRGB(255, 0, 0))
+                    end
+                elseif res.StatusCode == 429 then
+                    addMessage("Hata (429)", "OpenAI Kota Aşımı veya Rate Limit!", Color3.fromRGB(255, 100, 100))
+                else
+                    addMessage("Hata", "OpenAI API Hatası Kod: " .. tostring(res.StatusCode) .. " | " .. tostring(res.Body), Color3.fromRGB(255, 0, 0))
+                end
             else
-                addMessage("Error", "API Hatası: " .. tostring(res.StatusCode), Color3.fromRGB(255, 0, 0))
+                addMessage("Hata", "Bağlantı kurulamadı.", Color3.fromRGB(255, 0, 0))
             end
         end
     end)
 end
 
 chatSend.MouseButton1Click:Connect(function()
-    if chatInput.Text ~= "" then
-        sendToAI(chatInput.Text)
-    end
+    if chatInput.Text ~= "" then sendToAI(chatInput.Text) end
 end)
 
 chatInput.FocusLost:Connect(function(enter)
-    if enter and chatInput.Text ~= "" then
-        sendToAI(chatInput.Text)
-    end
+    if enter and chatInput.Text ~= "" then sendToAI(chatInput.Text) end
 end)
 
--- Ayarlar Buton Olayları
 selectAIBtn.MouseButton1Click:Connect(function()
     if AISettings.ActiveAI == "Gemini" then AISettings.ActiveAI = "OpenAI" else AISettings.ActiveAI = "Gemini" end
-    selectAIBtn.Text = "Active AI: " .. AISettings.ActiveAI
+    selectAIBtn.Text = "Aktif AI: " .. AISettings.ActiveAI
 end)
 
 rgbBtn.MouseButton1Click:Connect(function()
@@ -760,26 +726,18 @@ end)
 
 gradientBtn.MouseButton1Click:Connect(function()
     ThemeSettings.GradientEnabled = not ThemeSettings.GradientEnabled
-    gradientBtn.Text = "Gradient Mode: " .. tostring(ThemeSettings.GradientEnabled)
-    
-    if ThemeSettings.GradientEnabled then
-        mainGrad.Enabled = true
-        aiGrad.Enabled = true
-    else
-        mainGrad.Enabled = false
-        aiGrad.Enabled = false
-        mainStroke.Color = ThemeSettings.CustomColor
-        aiGuiStroke.Color = ThemeSettings.CustomColor
-    end
+    gradientBtn.Text = "Gradient Modu: " .. tostring(ThemeSettings.GradientEnabled)
+    mainGrad.Enabled = ThemeSettings.GradientEnabled
+    aiGrad.Enabled = ThemeSettings.GradientEnabled
 end)
 
 saveBtn.MouseButton1Click:Connect(function()
     AISettings.GeminiKey = geminiBox.Text
     AISettings.OpenAIKey = openaiBox.Text
     saveSettings()
-    saveBtn.Text = "Saved!"
+    saveBtn.Text = "Kaydedildi!"
     task.wait(1)
-    saveBtn.Text = "Save Configuration & Apply"
+    saveBtn.Text = "Ayarları Kaydet"
 end)
 
 aiSettingsBtn.MouseButton1Click:Connect(function()
@@ -787,7 +745,6 @@ aiSettingsBtn.MouseButton1Click:Connect(function()
     settingsFrame.Visible = not chatFrame.Visible
 end)
 
--- UI Toggle / Min / Max
 local aiOpen = false
 local minimized = false
 
@@ -813,7 +770,6 @@ aiMin.MouseButton1Click:Connect(function()
     end
 end)
 
--- Renk (Theme) Motoru
 task.spawn(function()
     local hue = 0
     while RunService.RenderStepped:Wait() do
@@ -822,7 +778,6 @@ task.spawn(function()
             if hue >= 1 then hue = 0 end
             local color1 = Color3.fromHSV(hue, 1, 1)
             local color2 = Color3.fromHSV((hue + 0.5) % 1, 1, 1)
-            
             if ThemeSettings.GradientEnabled then
                 mainGrad.Color = ColorSequence.new(color1, color2)
                 aiGrad.Color = ColorSequence.new(color1, color2)
@@ -834,10 +789,7 @@ task.spawn(function()
     end
 end)
 
--- Klavye kısayolu M Tuşu (Sadece ana menüyü açıp kapar, AI menüsü AI butonuyla açılır)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.M then
-        toggleUI()
-    end
+    if input.KeyCode == Enum.KeyCode.M then toggleUI() end
 end)
