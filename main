@@ -398,7 +398,6 @@ end
 openBtn.MouseButton1Click:Connect(toggleUI)
 close.MouseButton1Click:Connect(toggleUI)
 
-
 ---------------------------------------------------------------------
 -- AI PANEL & SETTINGS & TRUE CHATBOT SYSTEM (FIXED BUGS & AQ. KEY)
 ---------------------------------------------------------------------
@@ -409,10 +408,16 @@ local ThemeSettings = {
     CustomColor = Color3.fromRGB(255, 85, 0)
 }
 local AISettings = {
-    ActiveAI = "Gemini",
+    ActiveAI = "Gemini", -- "Gemini" veya "OpenAI"
     GeminiKey = "",
     OpenAIKey = ""
 }
+
+-- Sohbet geçmişi (tüm tur geçmişi saklanır; istenildiği kadar sohbet için büyür)
+local conversation = {} -- her öğe: {role="user"/"assistant", content="..."}
+-- System prompt (tam metin)
+local sysPrompt = [[Sen 'Mars AI' adında, yetenekli, her konudan anlayan, gerektiğinde şaka yapabilen ve uzman bir Roblox/Luau yapay zeka asistanısın. Kullanıcıya yardımcı ol, basit ve anlaşılır cevap ver, gerektiğinde kod örneği ver, güvenlik ve politika ihlali oluşturacak talepleri reddet. Kısaca: nazik, öğretici, kısa ve gerekli örneklerle yardımcı ol.]]
+
 
 -- Key Temizleme Yardımcısı (Boşlukları kaldırır)
 local function cleanKey(key)
@@ -664,30 +669,61 @@ end
 local function executeHttpRequestWithRetry(options, maxRetries)
     maxRetries = maxRetries or 3
     for attempt = 1, maxRetries do
-        local res = req(options)
-        if res and res.StatusCode == 429 then
-            addMessage("System", "⚠️ API yoğun, 3 sn beklenip tekrar deneniyor (" .. attempt .. "/" .. maxRetries .. ")...", Color3.fromRGB(255, 170, 0))
-            task.wait(3)
+        local ok, res = pcall(function() return req(options) end)
+        if not ok or not res then
+            -- network/exec hata; küçük bekleme ile yeniden dene
+            task.wait(1)
         else
-            return res
+            if res.StatusCode == 429 then
+                addMessage("System", "⚠️ API yoğun, 3 sn beklenip tekrar deneniyor (" .. attempt .. "/" .. maxRetries .. ")...", Color3.fromRGB(255, 170, 0))
+                task.wait(3)
+            else
+                return res
+            end
         end
     end
-    return req(options)
+    -- son bir deneme
+    local ok, res = pcall(function() return req(options) end)
+    if ok then return res end
+    return nil
 end
 
 -- AI İstek Yollama Modülü (Gerçek Sohbet Motoru, Hata Çözücü & AQ. Eşleme)
+local function detectAndApplyKeys()
+    -- temizlenmiş kutu değerleri
+    local gBox = cleanKey(geminiBox.Text or "")
+    local oBox = cleanKey(openaiBox.Text or "")
+    -- Eğer kullanıcı birini yapıştırdıysa otomatik ayarla
+    if gBox ~= "" and string.sub(gBox,1,3) == "AQ." and oBox == "" then
+        AISettings.ActiveAI = "Gemini"
+        AISettings.GeminiKey = gBox
+        addMessage("System", "Google AI Studio anahtarı algılandı (AQ.), Gemini aktif.", Color3.fromRGB(255,200,100))
+    elseif oBox ~= "" and string.sub(oBox,1,3) == "sk-" and gBox == "" then
+        AISettings.ActiveAI = "OpenAI"
+        AISettings.OpenAIKey = oBox
+        addMessage("System", "OpenAI anahtarı algılandı (sk-), OpenAI aktif.", Color3.fromRGB(255,200,100))
+    else
+        -- Eğer her iki kutuda da anahtar varsa, kullanıcı seçimi korunur.
+        if gBox ~= "" and string.sub(gBox,1,3) == "AQ." then AISettings.GeminiKey = gBox end
+        if oBox ~= "" and string.sub(oBox,1,3) == "sk-" then AISettings.OpenAIKey = oBox end
+    end
+end
+
 local function sendToAI(prompt)
     if not req then
         addMessage("System", "Executor HTTP Request desteklemiyor!", Color3.fromRGB(255, 80, 80))
         return
     end
 
+    -- Temizleme & otomatik algılama
+    AISettings.GeminiKey = cleanKey(geminiBox.Text or AISettings.GeminiKey)
+    AISettings.OpenAIKey = cleanKey(openaiBox.Text or AISettings.OpenAIKey)
+    detectAndApplyKeys()
+
     addMessage("You", prompt, Color3.fromRGB(150, 200, 255))
     chatInput.Text = ""
 
     -- Scriptblox araması sadece mesaj "scriptblox " ile başlıyorsa çalışacak.
-    -- Örneğin: "scriptblox admin" yazarsan arama yapar. "scriptblox sence nasıl?" dersen de sohbete gitmez, arar.
-    -- Ama "bana scriptblox hakkında bilgi ver" dersen direk sohbete gider.
     local sbMatch = string.match(string.lower(prompt), "^scriptblox%s+(.+)")
     if sbMatch then
         addMessage("System", "ScriptBlox üzerinde aranıyor: " .. sbMatch, Color3.fromRGB(200, 200, 200))
@@ -696,62 +732,70 @@ local function sendToAI(prompt)
         return
     end
 
-    -- Gelişmiş Sohbet Karakteri (Şaka yapabilir, kod yazabilir, sohbet edebilir)
-    local sysPrompt = "Sen 'Mars AI' adında, yetenekli, her konudan anlayan, gerektiğinde şaka yapabilen ve uzman bir Roblox/Luau yapay zeka asistanısın. Kullanıcı seninle normal sohbet etmek isterse doğal, samimi bir dille yanıt ver (hata veya 'anlamadım' deme). Eğer senden kod veya script yazmanı isterse, kodu mutlaka ```lua ... ``` bloğu içinde sağla. Kullanıcı dostusun ve her soruyu eksiksiz, hatasız ve zekice yanıtlarsın."
+    -- conversation'a kullanıcı mesajını ekle (çoklu tur)
+    table.insert(conversation, {role = "user", content = prompt})
 
     task.spawn(function()
         local gKey = cleanKey(AISettings.GeminiKey)
         local oKey = cleanKey(AISettings.OpenAIKey)
 
-        -- Otomatik Key Algılama 
-        if (AISettings.ActiveAI == "Gemini" and gKey == "" and string.sub(oKey, 1, 3) == "sk-") or 
-           (AISettings.ActiveAI == "Gemini" and string.sub(gKey, 1, 3) == "sk-") then
-            AISettings.ActiveAI = "OpenAI"
-            if string.sub(gKey, 1, 3) == "sk-" then
-                oKey = gKey
-                AISettings.OpenAIKey = gKey
+        -- Eğer hem anahtar yoksa kullanıcıyı uyar
+        if (AISettings.ActiveAI == "Gemini" or (gKey ~= "" and string.sub(gKey,1,3) == "AQ.")) and (gKey == "" ) then
+            -- Eğer OpenAI anahtarı sk- olarak bulunuyorsa otomatik geçiş:
+            if oKey ~= "" and string.sub(oKey,1,3) == "sk-" then
+                AISettings.ActiveAI = "OpenAI"
+                addMessage("System", "OpenAI anahtarı bulundu (sk-). OpenAI moduna geçiliyor.", Color3.fromRGB(255,200,100))
+            else
+                addMessage("System", "Hey, sohbete başlamak için ayarlardan Google AI Studio Key'ini (AQ. ile başlayan) girmen gerekiyor! API yokken Gemini çalışamaz :)", Color3.fromRGB(255, 150, 100))
+                return
             end
-            addMessage("System", "OpenAI Key algılandı, mod otomatik OpenAI yapıldı.", Color3.fromRGB(255, 200, 100))
-            
-        elseif (AISettings.ActiveAI == "OpenAI" and oKey == "" and string.sub(gKey, 1, 3) == "AQ.") or
-               (AISettings.ActiveAI == "OpenAI" and string.sub(oKey, 1, 3) == "AQ.") then
-            AISettings.ActiveAI = "Gemini"
-            if string.sub(oKey, 1, 3) == "AQ." then
-                gKey = oKey
-                AISettings.GeminiKey = oKey
+        end
+
+        if (AISettings.ActiveAI == "OpenAI" or (oKey ~= "" and string.sub(oKey,1,3) == "sk-")) and (oKey == "" ) then
+            -- Eğer Gemini anahtarı AQ. olarak bulunuyorsa otomatik geçiş:
+            if gKey ~= "" and string.sub(gKey,1,3) == "AQ." then
+                AISettings.ActiveAI = "Gemini"
+                addMessage("System", "Google AI Studio anahtarı bulundu (AQ.). Gemini moduna geçiliyor.", Color3.fromRGB(255,200,100))
+            else
+                addMessage("System", "Sohbet için ayarlardan OpenAI Key'ini (sk- ile başlayan) girmen gerekiyor!", Color3.fromRGB(255, 100, 100))
+                return
             end
-            addMessage("System", "Google AI Studio Key algılandı, mod otomatik Gemini yapıldı.", Color3.fromRGB(255, 200, 100))
         end
 
         if AISettings.ActiveAI == "Gemini" then
-            if gKey == "" then
-                addMessage("System", "Hey, sohbete başlamak için ayarlardan Google AI Studio Key'ini (AQ. ile başlayan) girmen gerekiyor! API yokken ben çalışamam :)", Color3.fromRGB(255, 100, 100))
+            gKey = cleanKey(AISettings.GeminiKey)
+            if gKey == "" or string.sub(gKey,1,3) ~= "AQ." then
+                addMessage("System", "Girdiğin API key 'AQ.' ile başlamıyor veya eksik. Google AI Studio üzerinden doğru aldığını kontrol et.", Color3.fromRGB(255, 150, 100))
                 return
             end
-            if string.sub(gKey, 1, 3) ~= "AQ." then
-                addMessage("System", "Girdiğin API key 'AQ.' ile başlamıyor, emin misin? Google AI Studio üzerinden doğru aldığını kontrol et.", Color3.fromRGB(255, 150, 100))
-                return
+
+            -- Gemini için çoklu tur full prompt oluştur
+            local fullPrompt = sysPrompt .. "\n\n"
+            for _, m in ipairs(conversation) do
+                if m.role == "user" then
+                    fullPrompt = fullPrompt .. "User: " .. m.content .. "\n"
+                else
+                    fullPrompt = fullPrompt .. "Assistant: " .. m.content .. "\n"
+                end
             end
-            
-            -- Payload formatını 400 ve 404 yememek için en stabil yapıya aldım.
-            -- Direkt karakteri mesajın başına gömüyoruz, %100 uyumlu çalışıyor.
-            local fullPrompt = sysPrompt .. "\n\nKullanıcı Mesajı: " .. prompt
-            
+
             local body = {
                 contents = {{ parts = {{ text = fullPrompt }} }}
             }
-            
+
             local res = executeHttpRequestWithRetry({
                 Url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" .. gKey,
                 Method = "POST",
                 Headers = {["Content-Type"] = "application/json"},
                 Body = HttpService:JSONEncode(body)
-            })
-            
+            }, 3)
+
             if res and res.StatusCode == 200 then
-                local dat = HttpService:JSONDecode(res.Body)
-                if dat and dat.candidates and dat.candidates[1] and dat.candidates[1].content then
-                    local txt = dat.candidates[1].content.parts[1].text
+                local ok, dat = pcall(function() return HttpService:JSONDecode(res.Body) end)
+                if ok and dat and dat.candidates and dat.candidates[1] and dat.candidates[1].content then
+                    local txt = dat.candidates[1].content.parts[1].text or ""
+                    -- assistant yanıtını conversation'a ekle
+                    table.insert(conversation, {role = "assistant", content = txt})
                     addMessage("Mars AI (Gemini)", txt, Color3.fromRGB(85, 255, 85))
                 else
                     addMessage("Error", "Cevap geldi ama okunabilir formatta değil.", Color3.fromRGB(255, 80, 80))
@@ -768,19 +812,25 @@ local function sendToAI(prompt)
             end
 
         elseif AISettings.ActiveAI == "OpenAI" then
-            if oKey == "" then
-                addMessage("System", "Sohbet için ayarlardan OpenAI Key'ini (sk- ile başlayan) girmen gerekiyor!", Color3.fromRGB(255, 100, 100))
+            oKey = cleanKey(AISettings.OpenAIKey)
+            if oKey == "" or string.sub(oKey,1,3) ~= "sk-" then
+                addMessage("System", "Girdiğin OpenAI anahtarı 'sk-' ile başlamıyor veya eksik. Doğrulayın.", Color3.fromRGB(255, 100, 100))
                 return
             end
-            
+
+            -- OpenAI için messages array oluştur (system + conversation)
+            local messages = {
+                {role = "system", content = sysPrompt}
+            }
+            for _, m in ipairs(conversation) do
+                table.insert(messages, {role = m.role, content = m.content})
+            end
+
             local body = {
                 model = "gpt-4o-mini",
-                messages = {
-                    {role = "system", content = sysPrompt},
-                    {role = "user", content = prompt}
-                }
+                messages = messages
             }
-            
+
             local res = executeHttpRequestWithRetry({
                 Url = "https://api.openai.com/v1/chat/completions",
                 Method = "POST",
@@ -789,13 +839,16 @@ local function sendToAI(prompt)
                     ["Authorization"] = "Bearer " .. oKey
                 },
                 Body = HttpService:JSONEncode(body)
-            })
-            
+            }, 3)
+
             if res and res.StatusCode == 200 then
-                local dat = HttpService:JSONDecode(res.Body)
-                if dat and dat.choices and dat.choices[1] then
-                    local txt = dat.choices[1].message.content
+                local ok, dat = pcall(function() return HttpService:JSONDecode(res.Body) end)
+                if ok and dat and dat.choices and dat.choices[1] and dat.choices[1].message then
+                    local txt = dat.choices[1].message.content or ""
+                    table.insert(conversation, {role = "assistant", content = txt})
                     addMessage("Mars AI (OpenAI)", txt, Color3.fromRGB(85, 255, 85))
+                else
+                    addMessage("Error", "OpenAI'den beklenen formatta yanıt gelmedi.", Color3.fromRGB(255, 80, 80))
                 end
             elseif res and res.StatusCode == 429 then
                 addMessage("Error", "OpenAI Kota Aşımı (429)! Kredin bitti ya da çok hızlı yazıyorsun.", Color3.fromRGB(255, 100, 100))
@@ -850,6 +903,8 @@ end)
 saveBtn.MouseButton1Click:Connect(function()
     AISettings.GeminiKey = cleanKey(geminiBox.Text)
     AISettings.OpenAIKey = cleanKey(openaiBox.Text)
+    -- otomatik algılama ve kaydet
+    detectAndApplyKeys()
     saveSettings()
     saveBtn.Text = "Kaydedildi ve Temizlendi!"
     task.wait(1)
