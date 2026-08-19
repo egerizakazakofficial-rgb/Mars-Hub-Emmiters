@@ -1,4 +1,4 @@
--- Project Games | Brookhaven Emitter Master V12 + AI Integration (Max Full, New Tab, Copy & History)
+-- Project Games | Brookhaven Emitter Master V12 + Full Max Integration
 -- Full Max | Categorized | Multi-Select & Search | PC & Mobile Responsive | Bug-Free
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local req = (syn and syn.request) or (http and http.request) or http_request or 
 local setclip = setclipboard or toclipboard or (syn and syn.set_clipboard) or (fluxus and fluxus.set_clipboard)
 
 if not req then
-    warn("Executor'unuz HTTP request desteklemiyor, AI özellikleri çalışmayabilir!")
+    warn("Executor'unuz HTTP request desteklemiyor, Full Max özellikleri kısıtlı çalışabilir!")
 end
 
 -- Var olan GUI temizliği
@@ -23,11 +23,32 @@ if existingGui then
     existingGui:Destroy()
 end
 
-local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ApplyEmmiter")
+local remote = ReplicatedStorage:WaitForChild("Remotes", 5) and ReplicatedStorage.Remotes:WaitForChild("ApplyEmmiter", 5)
 
 -- Özel Logo ID'leri
 local PREMIUM_ICON = "rbxassetid://6010710098"
 local VIP_ICON = "rbxassetid://18248037214"
+
+-- TOOL FRAME MAX MODÜLÜ (Workspace & ReplicatedStorage Taraması)
+local ToolFrameMax = {}
+function ToolFrameMax.ObjeyiBul(isim)
+    local function Ara(parent)
+        for _, obje in pairs(parent:GetDescendants()) do
+            if string.lower(obje.Name) == string.lower(isim) then
+                return obje
+            end
+        end
+        return nil
+    end
+
+    local bulunanWorkspace = Ara(game:GetService("Workspace"))
+    if bulunanWorkspace then return bulunanWorkspace, "Workspace" end
+
+    local bulunanRS = Ara(game:GetService("ReplicatedStorage"))
+    if bulunanRS then return bulunanRS, "ReplicatedStorage" end
+
+    return nil, nil
+end
 
 -- [1]=ID, [2]=Arg, [3]=Name, [4]=IconID, [5]=isVIP, [6]=isRP
 local emitterData = {
@@ -120,7 +141,6 @@ tooltip.TextSize = 14
 tooltip.Font = Enum.Font.Gotham
 tooltip.Visible = false
 tooltip.BackgroundTransparency = 0.05
-tooltip.AnchorPoint = Vector2.new(0, 0)
 tooltip.Parent = mainGui
 tooltip.ZIndex = 100
 Instance.new("UICorner", tooltip).CornerRadius = UDim.new(0, 6)
@@ -205,7 +225,7 @@ top.Parent = main
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0.4, 0, 1, 0)
 title.Position = UDim2.new(0, 20, 0, 0)
-title.Text = "⭐ Mars Hub Emmiters ⭐"
+title.Text = "⭐ Mars Hub | Emitters ⭐"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 17
@@ -239,21 +259,21 @@ Instance.new("UICorner", searchBar).CornerRadius = UDim.new(0, 6)
 local searchStroke = Instance.new("UIStroke", searchBar)
 searchStroke.Color = Color3.fromRGB(40, 40, 45)
 
-local aiBtn = Instance.new("TextButton")
-aiBtn.Size = UDim2.new(0, 80, 0, 30)
-aiBtn.AnchorPoint = Vector2.new(1, 0.5)
-aiBtn.Position = UDim2.new(1, -200, 0.5, 0)
-aiBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-aiBtn.TextColor3 = Color3.fromRGB(85, 170, 255)
-aiBtn.Text = "🤖 AI Chat"
-aiBtn.Font = Enum.Font.GothamBold
-aiBtn.TextSize = 12
-aiBtn.Parent = top
-Instance.new("UICorner", aiBtn).CornerRadius = UDim.new(0, 6)
-local aiStroke = Instance.new("UIStroke", aiBtn)
-aiStroke.Color = Color3.fromRGB(40, 40, 45)
+local fullMaxBtn = Instance.new("TextButton")
+fullMaxBtn.Size = UDim2.new(0, 95, 0, 30)
+fullMaxBtn.AnchorPoint = Vector2.new(1, 0.5)
+fullMaxBtn.Position = UDim2.new(1, -200, 0.5, 0)
+fullMaxBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+fullMaxBtn.TextColor3 = Color3.fromRGB(85, 170, 255)
+fullMaxBtn.Text = "🚀 Full Max"
+fullMaxBtn.Font = Enum.Font.GothamBold
+fullMaxBtn.TextSize = 12
+fullMaxBtn.Parent = top
+Instance.new("UICorner", fullMaxBtn).CornerRadius = UDim.new(0, 6)
+local fullMaxBtnStroke = Instance.new("UIStroke", fullMaxBtn)
+fullMaxBtnStroke.Color = Color3.fromRGB(40, 40, 45)
 
--- Scroll Alanı (Emitterlar)
+-- Scroll Alanı
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1, -15, 1, -70)
 scroll.Position = UDim2.new(0, 10, 0, 60)
@@ -402,7 +422,7 @@ close.MouseButton1Click:Connect(toggleUI)
 
 
 ---------------------------------------------------------------------
--- AI PANEL & FULL MAX CHATBOT (Sohbet Geçmişi, Yeni Sekme & Copy Butonu)
+-- FULL MAX PANEL (AI Chat & Tool Frame Max Scanner)
 ---------------------------------------------------------------------
 
 local ThemeSettings = {
@@ -462,89 +482,90 @@ local function loadSettings()
 end
 loadSettings()
 
--- AI Frame
-local aiGui = Instance.new("Frame")
-aiGui.Size = UDim2.new(0, 460, 0, 360)
-aiGui.Position = UDim2.new(0.5, 0, 1.5, 0)
-aiGui.AnchorPoint = Vector2.new(0.5, 0.5)
-aiGui.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-aiGui.ClipsDescendants = true
-aiGui.Parent = mainGui
-Instance.new("UICorner", aiGui).CornerRadius = UDim.new(0, 12)
+-- Full Max Frame
+local fullMaxGui = Instance.new("Frame")
+fullMaxGui.Name = "FullMaxFrame"
+fullMaxGui.Size = UDim2.new(0, 460, 0, 360)
+fullMaxGui.Position = UDim2.new(0.5, 0, 1.5, 0)
+fullMaxGui.AnchorPoint = Vector2.new(0.5, 0.5)
+fullMaxGui.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+fullMaxGui.ClipsDescendants = true
+fullMaxGui.Parent = mainGui
+Instance.new("UICorner", fullMaxGui).CornerRadius = UDim.new(0, 12)
 
-local aiGuiStroke = Instance.new("UIStroke", aiGui)
-aiGuiStroke.Thickness = 2
-aiGuiStroke.Color = Color3.fromRGB(255, 85, 0)
+local fullMaxStroke = Instance.new("UIStroke", fullMaxGui)
+fullMaxStroke.Thickness = 2
+fullMaxStroke.Color = Color3.fromRGB(255, 85, 0)
 
-local aiGrad = Instance.new("UIGradient", aiGuiStroke)
-aiGrad.Color = ColorSequence.new(Color3.fromRGB(85, 170, 255), Color3.fromRGB(0, 50, 150))
-aiGrad.Enabled = false
+local fullMaxGrad = Instance.new("UIGradient", fullMaxStroke)
+fullMaxGrad.Color = ColorSequence.new(Color3.fromRGB(85, 170, 255), Color3.fromRGB(0, 50, 150))
+fullMaxGrad.Enabled = false
 
-makeSmoothDrag(aiGui)
+makeSmoothDrag(fullMaxGui)
 
-local aiTop = Instance.new("Frame")
-aiTop.Size = UDim2.new(1, 0, 0, 40)
-aiTop.BackgroundTransparency = 1
-aiTop.Parent = aiGui
+local fullMaxTop = Instance.new("Frame")
+fullMaxTop.Size = UDim2.new(1, 0, 0, 40)
+fullMaxTop.BackgroundTransparency = 1
+fullMaxTop.Parent = fullMaxGui
 
-local aiTitle = Instance.new("TextLabel")
-aiTitle.Size = UDim2.new(0.4, 0, 1, 0)
-aiTitle.Position = UDim2.new(0, 15, 0, 0)
-aiTitle.Text = "🤖 Mars AI (Full Max)"
-aiTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-aiTitle.Font = Enum.Font.GothamBold
-aiTitle.TextSize = 14
-aiTitle.TextXAlignment = Enum.TextXAlignment.Left
-aiTitle.BackgroundTransparency = 1
-aiTitle.Parent = aiTop
+local fullMaxTitle = Instance.new("TextLabel")
+fullMaxTitle.Size = UDim2.new(0.5, 0, 1, 0)
+fullMaxTitle.Position = UDim2.new(0, 15, 0, 0)
+fullMaxTitle.Text = "🚀 Full Max (AI & Tool Scanner)"
+fullMaxTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+fullMaxTitle.Font = Enum.Font.GothamBold
+fullMaxTitle.TextSize = 13
+fullMaxTitle.TextXAlignment = Enum.TextXAlignment.Left
+fullMaxTitle.BackgroundTransparency = 1
+fullMaxTitle.Parent = fullMaxTop
 
-local aiClose = Instance.new("TextButton")
-aiClose.Size = UDim2.new(0, 30, 0, 30)
-aiClose.Position = UDim2.new(1, -35, 0.5, -15)
-aiClose.Text = "×"
-aiClose.TextColor3 = Color3.fromRGB(255, 60, 60)
-aiClose.Font = Enum.Font.GothamBold
-aiClose.TextSize = 24
-aiClose.BackgroundTransparency = 1
-aiClose.Parent = aiTop
+local fullMaxClose = Instance.new("TextButton")
+fullMaxClose.Size = UDim2.new(0, 30, 0, 30)
+fullMaxClose.Position = UDim2.new(1, -35, 0.5, -15)
+fullMaxClose.Text = "×"
+fullMaxClose.TextColor3 = Color3.fromRGB(255, 60, 60)
+fullMaxClose.Font = Enum.Font.GothamBold
+fullMaxClose.TextSize = 24
+fullMaxClose.BackgroundTransparency = 1
+fullMaxClose.Parent = fullMaxTop
 
-local aiMin = Instance.new("TextButton")
-aiMin.Size = UDim2.new(0, 30, 0, 30)
-aiMin.Position = UDim2.new(1, -70, 0.5, -15)
-aiMin.Text = "-"
-aiMin.TextColor3 = Color3.fromRGB(255, 255, 255)
-aiMin.Font = Enum.Font.GothamBold
-aiMin.TextSize = 24
-aiMin.BackgroundTransparency = 1
-aiMin.Parent = aiTop
+local fullMaxMin = Instance.new("TextButton")
+fullMaxMin.Size = UDim2.new(0, 30, 0, 30)
+fullMaxMin.Position = UDim2.new(1, -70, 0.5, -15)
+fullMaxMin.Text = "-"
+fullMaxMin.TextColor3 = Color3.fromRGB(255, 255, 255)
+fullMaxMin.Font = Enum.Font.GothamBold
+fullMaxMin.TextSize = 24
+fullMaxMin.BackgroundTransparency = 1
+fullMaxMin.Parent = fullMaxTop
 
-local aiSettingsBtn = Instance.new("TextButton")
-aiSettingsBtn.Size = UDim2.new(0, 30, 0, 30)
-aiSettingsBtn.Position = UDim2.new(1, -105, 0.5, -15)
-aiSettingsBtn.Text = "⚙️"
-aiSettingsBtn.BackgroundTransparency = 1
-aiSettingsBtn.Parent = aiTop
+local fullMaxSettingsBtn = Instance.new("TextButton")
+fullMaxSettingsBtn.Size = UDim2.new(0, 30, 0, 30)
+fullMaxSettingsBtn.Position = UDim2.new(1, -105, 0.5, -15)
+fullMaxSettingsBtn.Text = "⚙️"
+fullMaxSettingsBtn.BackgroundTransparency = 1
+fullMaxSettingsBtn.Parent = fullMaxTop
 
--- Yeni Sekme (New Chat / Reset History) Butonu
+-- Yeni Sekme (New Chat / Reset History)
 local newTabBtn = Instance.new("TextButton")
 newTabBtn.Size = UDim2.new(0, 30, 0, 30)
 newTabBtn.Position = UDim2.new(1, -140, 0.5, -15)
 newTabBtn.Text = "➕"
 newTabBtn.BackgroundTransparency = 1
-newTabBtn.Parent = aiTop
+newTabBtn.Parent = fullMaxTop
 
 local chatFrame = Instance.new("Frame")
 chatFrame.Size = UDim2.new(1, 0, 1, -40)
 chatFrame.Position = UDim2.new(0, 0, 0, 40)
 chatFrame.BackgroundTransparency = 1
-chatFrame.Parent = aiGui
+chatFrame.Parent = fullMaxGui
 
 local settingsFrame = Instance.new("Frame")
 settingsFrame.Size = UDim2.new(1, 0, 1, -40)
 settingsFrame.Position = UDim2.new(0, 0, 0, 40)
 settingsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 settingsFrame.Visible = false
-settingsFrame.Parent = aiGui
+settingsFrame.Parent = fullMaxGui
 
 local chatScroll = Instance.new("ScrollingFrame")
 chatScroll.Size = UDim2.new(1, -20, 1, -60)
@@ -562,9 +583,9 @@ chatInput.Size = UDim2.new(1, -115, 0, 40)
 chatInput.Position = UDim2.new(0, 10, 1, -50)
 chatInput.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 chatInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-chatInput.PlaceholderText = "Sohbet et veya komut gir (Örn: scriptblox admin)"
+chatInput.PlaceholderText = "Sohbet et, komut veya 'find [obje]' gir..."
 chatInput.Font = Enum.Font.Gotham
-chatInput.TextSize = 12
+chatInput.TextSize = 11
 chatInput.TextWrapped = true
 chatInput.ClearTextOnFocus = false
 chatInput.Parent = chatFrame
@@ -599,8 +620,8 @@ setList.Padding = UDim.new(0, 10)
 setList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 local spacer = Instance.new("Frame", settingsFrame)
-spacer.Size = UDim2.new(1,0,0,5)
-spacer.BackgroundTransparency=1
+spacer.Size = UDim2.new(1, 0, 0, 5)
+spacer.BackgroundTransparency = 1
 
 local function makeInput(ph, txt)
     local tb = Instance.new("TextBox")
@@ -663,7 +684,7 @@ local function addMessage(sender, text, color)
     end)
 end
 
--- Yeni Sekme / Sohbet Temizleme Olayı
+-- Yeni Sekme / Sohbet Temizleme
 newTabBtn.MouseButton1Click:Connect(function()
     table.clear(conversationHistory)
     lastAIResponse = ""
@@ -672,20 +693,20 @@ newTabBtn.MouseButton1Click:Connect(function()
             child:Destroy()
         end
     end
-    addMessage("System", "Yeni sekme açıldı! Sohbet geçmişi ve hafıza sıfırlandı.", Color3.fromRGB(85, 255, 170))
+    addMessage("Full Max", "Yeni sekme açıldı! Sohbet geçmişi ve hafıza sıfırlandı.", Color3.fromRGB(85, 255, 170))
 end)
 
--- Kopyalama Olayı
+-- Kopyalama
 chatCopy.MouseButton1Click:Connect(function()
     if lastAIResponse ~= "" then
         if setclip then
             setclip(lastAIResponse)
-            addMessage("System", "Son AI yanıtı panoya kopyalandı!", Color3.fromRGB(85, 255, 170))
+            addMessage("Full Max", "Son yanıt panoya kopyalandı!", Color3.fromRGB(85, 255, 170))
         else
-            addMessage("System", "Executor panoya yazmayı desteklemiyor.", Color3.fromRGB(255, 100, 100))
+            addMessage("Full Max", "Executor panoya yazmayı desteklemiyor.", Color3.fromRGB(255, 100, 100))
         end
     else
-        addMessage("System", "Kopyalanacak yanıt bulunamadı.", Color3.fromRGB(255, 170, 0))
+        addMessage("Full Max", "Kopyalanacak yanıt bulunamadı.", Color3.fromRGB(255, 170, 0))
     end
 end)
 
@@ -717,7 +738,7 @@ local function executeHttpRequestWithRetry(options, maxRetries)
     for attempt = 1, maxRetries do
         local res = req(options)
         if res and res.StatusCode == 429 then
-            addMessage("System", "⚠️ API yoğun, tekrar deneniyor (" .. attempt .. "/" .. maxRetries .. ")...", Color3.fromRGB(255, 170, 0))
+            addMessage("Full Max", "⚠️ API yoğun, tekrar deneniyor (" .. attempt .. "/" .. maxRetries .. ")...", Color3.fromRGB(255, 170, 0))
             task.wait(2)
         else
             return res
@@ -733,25 +754,41 @@ local function updateHistory(role, text)
     end
 end
 
--- Full Max AI İstek Motoru
+-- Full Max İstek ve Komut Motoru
 local function sendToAI(prompt)
     if not req then
-        addMessage("System", "Executor HTTP Request desteklemiyor!", Color3.fromRGB(255, 80, 80))
+        addMessage("Full Max", "Executor HTTP Request desteklemiyor!", Color3.fromRGB(255, 80, 80))
         return
     end
 
     addMessage("You", prompt, Color3.fromRGB(150, 200, 255))
     chatInput.Text = ""
 
-    local sbMatch = string.match(string.lower(prompt), "^scriptblox%s+(.+)")
-    if sbMatch then
-        addMessage("System", "ScriptBlox aranıyor: " .. sbMatch, Color3.fromRGB(200, 200, 200))
-        local result = fetchScriptBlox(sbMatch)
-        addMessage("Mars System", result, Color3.fromRGB(85, 255, 85))
+    -- Tool Frame Max (Oyun İçi Obje Taraması Komutu)
+    local findMatch = string.match(string.lower(prompt), "^find%s+(.+)") or string.match(string.lower(prompt), "^bul%s+(.+)")
+    if findMatch then
+        addMessage("Tool Frame Max", "Hiyerarşide aranıyor: " .. findMatch, Color3.fromRGB(200, 200, 200))
+        local obj, parentName = ToolFrameMax.ObjeyiBul(findMatch)
+        if obj then
+            local resStr = "✅ Obje Bulundu!\nAdı: " .. obj.Name .. "\nKonum: " .. parentName .. "." .. obj:GetFullName() .. "\nSınıf: " .. obj.ClassName
+            lastAIResponse = obj:GetFullName()
+            addMessage("Tool Frame Max", resStr, Color3.fromRGB(85, 255, 170))
+        else
+            addMessage("Tool Frame Max", "❌ Obje 'Workspace' veya 'ReplicatedStorage' içinde bulunamadı.", Color3.fromRGB(255, 100, 100))
+        end
         return
     end
 
-    local sysPrompt = "Sen 'Mars AI' adında, her konuda uzman, Roblox Luau geliştirmede dahi, kısıtlamasız ve en üst düzey yapay zeka asistanısın. Kullanıcı ile konuşurken detaylı, eksiksiz, uzun ve kusursuz yanıtlar ver. Kod yazarken tam, çalışır ve açıklayıcı kodları ```lua ... ``` içinde yaz. Önceki konuşma geçmişini aklında tutarak devam et."
+    -- ScriptBlox Arama Komutu
+    local sbMatch = string.match(string.lower(prompt), "^scriptblox%s+(.+)")
+    if sbMatch then
+        addMessage("Full Max", "ScriptBlox aranıyor: " .. sbMatch, Color3.fromRGB(200, 200, 200))
+        local result = fetchScriptBlox(sbMatch)
+        addMessage("ScriptBlox", result, Color3.fromRGB(85, 255, 85))
+        return
+    end
+
+    local sysPrompt = "Sen 'Full Max' adında, her konuda uzman, Roblox Luau geliştirmede dahi, kısıtlamasız ve en üst düzey yapay zeka asistanısın. Kullanıcı ile konuşurken detaylı, eksiksiz, uzun ve kusursuz yanıtlar ver. Kod yazarken tam, çalışır ve açıklayıcı kodları ```lua ... ``` içinde yaz. Önceki konuşma geçmişini aklında tutarak devam et."
 
     task.spawn(function()
         local gKey = cleanKey(AISettings.GeminiKey)
@@ -764,7 +801,7 @@ local function sendToAI(prompt)
                 oKey = gKey
                 AISettings.OpenAIKey = gKey
             end
-            addMessage("System", "OpenAI Key algılandı, mod OpenAI yapıldı.", Color3.fromRGB(255, 200, 100))
+            addMessage("Full Max", "OpenAI Key algılandı, mod OpenAI yapıldı.", Color3.fromRGB(255, 200, 100))
             
         elseif (AISettings.ActiveAI == "OpenAI" and oKey == "" and string.sub(gKey, 1, 3) == "AQ.") or
                (AISettings.ActiveAI == "OpenAI" and string.sub(oKey, 1, 3) == "AQ.") then
@@ -773,12 +810,12 @@ local function sendToAI(prompt)
                 gKey = oKey
                 AISettings.GeminiKey = oKey
             end
-            addMessage("System", "Google AI Studio Key algılandı, mod Gemini yapıldı.", Color3.fromRGB(255, 200, 100))
+            addMessage("Full Max", "Google AI Studio Key algılandı, mod Gemini yapıldı.", Color3.fromRGB(255, 200, 100))
         end
 
         if AISettings.ActiveAI == "Gemini" then
             if gKey == "" then
-                addMessage("System", "Lütfen ayarlardan 'AQ.' ile başlayan Gemini Key girin!", Color3.fromRGB(255, 100, 100))
+                addMessage("Full Max", "Lütfen ayarlardan 'AQ.' ile başlayan Gemini Key girin!", Color3.fromRGB(255, 100, 100))
                 return
             end
             
@@ -809,7 +846,7 @@ local function sendToAI(prompt)
                 if success and dat and dat.candidates and dat.candidates[1] and dat.candidates[1].content then
                     local txt = dat.candidates[1].content.parts[1].text
                     lastAIResponse = txt
-                    addMessage("Mars AI (Gemini)", txt, Color3.fromRGB(85, 255, 85))
+                    addMessage("Full Max (Gemini)", txt, Color3.fromRGB(85, 255, 85))
                     updateHistory("user", prompt)
                     updateHistory("assistant", txt)
                 else
@@ -828,7 +865,7 @@ local function sendToAI(prompt)
 
         elseif AISettings.ActiveAI == "OpenAI" then
             if oKey == "" then
-                addMessage("System", "Lütfen ayarlardan 'sk-' ile başlayan OpenAI Key girin!", Color3.fromRGB(255, 100, 100))
+                addMessage("Full Max", "Lütfen ayarlardan 'sk-' ile başlayan OpenAI Key girin!", Color3.fromRGB(255, 100, 100))
                 return
             end
             
@@ -860,7 +897,7 @@ local function sendToAI(prompt)
                 if success and dat and dat.choices and dat.choices[1] then
                     local txt = dat.choices[1].message.content
                     lastAIResponse = txt
-                    addMessage("Mars AI (OpenAI)", txt, Color3.fromRGB(85, 255, 85))
+                    addMessage("Full Max (OpenAI)", txt, Color3.fromRGB(85, 255, 85))
                     updateHistory("user", prompt)
                     updateHistory("assistant", txt)
                 end
@@ -904,12 +941,12 @@ gradientBtn.MouseButton1Click:Connect(function()
     
     if ThemeSettings.GradientEnabled then
         mainGrad.Enabled = true
-        aiGrad.Enabled = true
+        fullMaxGrad.Enabled = true
     else
         mainGrad.Enabled = false
-        aiGrad.Enabled = false
+        fullMaxGrad.Enabled = false
         mainStroke.Color = ThemeSettings.CustomColor
-        aiGuiStroke.Color = ThemeSettings.CustomColor
+        fullMaxStroke.Color = ThemeSettings.CustomColor
     end
 end)
 
@@ -922,32 +959,32 @@ saveBtn.MouseButton1Click:Connect(function()
     saveBtn.Text = "Save Configuration & Apply"
 end)
 
-aiSettingsBtn.MouseButton1Click:Connect(function()
+fullMaxSettingsBtn.MouseButton1Click:Connect(function()
     chatFrame.Visible = not chatFrame.Visible
     settingsFrame.Visible = not chatFrame.Visible
 end)
 
-local aiOpen = false
+local fullMaxOpen = false
 local minimized = false
 
-aiBtn.MouseButton1Click:Connect(function()
-    aiOpen = not aiOpen
-    aiGui:TweenPosition(aiOpen and UDim2.new(0.5, 0, 0.5, 0) or UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
+fullMaxBtn.MouseButton1Click:Connect(function()
+    fullMaxOpen = not fullMaxOpen
+    fullMaxGui:TweenPosition(fullMaxOpen and UDim2.new(0.5, 0, 0.5, 0) or UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
 end)
 
-aiClose.MouseButton1Click:Connect(function()
-    aiOpen = false
-    aiGui:TweenPosition(UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
+fullMaxClose.MouseButton1Click:Connect(function()
+    fullMaxOpen = false
+    fullMaxGui:TweenPosition(UDim2.new(0.5, 0, 1.5, 0), "Out", "Back", 0.5, true)
 end)
 
-aiMin.MouseButton1Click:Connect(function()
+fullMaxMin.MouseButton1Click:Connect(function()
     minimized = not minimized
     if minimized then
-        aiGui:TweenSize(UDim2.new(0, 460, 0, 40), "Out", "Quad", 0.3, true)
+        fullMaxGui:TweenSize(UDim2.new(0, 460, 0, 40), "Out", "Quad", 0.3, true)
         chatFrame.Visible = false
         settingsFrame.Visible = false
     else
-        aiGui:TweenSize(UDim2.new(0, 460, 0, 360), "Out", "Quad", 0.3, true)
+        fullMaxGui:TweenSize(UDim2.new(0, 460, 0, 360), "Out", "Quad", 0.3, true)
         chatFrame.Visible = true
     end
 end)
@@ -964,16 +1001,16 @@ task.spawn(function()
             
             if ThemeSettings.GradientEnabled then
                 mainGrad.Color = ColorSequence.new(color1, color2)
-                aiGrad.Color = ColorSequence.new(color1, color2)
+                fullMaxGrad.Color = ColorSequence.new(color1, color2)
             else
                 mainStroke.Color = color1
-                aiGuiStroke.Color = color1
+                fullMaxStroke.Color = color1
             end
         end
     end
 end)
 
--- Keybind M
+-- Keybind M (Menüyü Aç/Kapat)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.M then
